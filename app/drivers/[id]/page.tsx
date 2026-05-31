@@ -50,8 +50,8 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
   const router = useRouter();
   const { drivers, vehicles, accidentCards, documents, vehicleStatuses, updateDriver, deleteDriver, deleteAccidentCard, deleteDocument, addDocument } = useStore();
 
-  const { profile } = useAuth();
-  const tenantId = profile?.tenantId ?? "default";
+  const { effectiveTenantId } = useAuth();
+  const tenantId = effectiveTenantId ?? "default";
 
   const driver = drivers.find(d => d.id === id);
   const [showEdit, setShowEdit] = useState(false);

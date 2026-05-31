@@ -153,8 +153,8 @@ export async function seedTenant(tenantId: string) {
 
 // ── Provider ───────────────────────────────────────────────────────────────────
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const { profile } = useAuth();
-  const tenantId = profile?.tenantId;
+  const { effectiveTenantId } = useAuth();
+  const tenantId = effectiveTenantId;
 
   const [state, setState] = useState<AppState>(emptyState);
   const [storeLoading, setStoreLoading] = useState(true);

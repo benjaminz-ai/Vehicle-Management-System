@@ -27,6 +27,12 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  // Support mode: super_admin enters as a tenant
+  supportTenant: { tenantId: string; tenantName: string } | null;
+  enterSupportMode: (tenantId: string, tenantName: string) => void;
+  exitSupportMode: () => void;
+  // The effective tenantId to use (support override or own tenantId)
+  effectiveTenantId: string | undefined;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,6 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [supportTenant, setSupportTenant] = useState<{ tenantId: string; tenantName: string } | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = sessionStorage.getItem("supportTenant");
+    return stored ? JSON.parse(stored) : null;
+  });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -68,16 +79,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
+  const enterSupportMode = (tenantId: string, tenantName: string) => {
+    const data = { tenantId, tenantName };
+    setSupportTenant(data);
+    sessionStorage.setItem("supportTenant", JSON.stringify(data));
+  };
+
+  const exitSupportMode = () => {
+    setSupportTenant(null);
+    sessionStorage.removeItem("supportTenant");
+  };
+
+  const effectiveTenantId = supportTenant?.tenantId ?? profile?.tenantId;
+
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
   const logout = async () => {
+    exitSupportMode();
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
+    <AuthContext.Provider value={{
+      user, profile, loading, login, logout,
+      supportTenant, enterSupportMode, exitSupportMode, effectiveTenantId,
+    }}>
       {children}
     </AuthContext.Provider>
   );

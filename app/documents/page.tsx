@@ -163,8 +163,8 @@ function UploadForm({ onSave, onCancel, tenantId }: {
 
 export default function DocumentsPage() {
   const { documents, vehicles, drivers, serviceRecords, accidentCards, addDocument, deleteDocument } = useStore();
-  const { profile } = useAuth();
-  const tenantId = profile?.tenantId ?? "default";
+  const { effectiveTenantId } = useAuth();
+  const tenantId = effectiveTenantId ?? "default";
   const [typeFilter, setTypeFilter] = useState("");
   const [entityFilter, setEntityFilter] = useState("");
   const [search, setSearch] = useState("");

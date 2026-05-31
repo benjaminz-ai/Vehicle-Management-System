@@ -9,7 +9,7 @@ import { seedTenant } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import {
   Car, Plus, Building2, CheckCircle2, XCircle, LogOut,
-  Loader2, Pencil, X,
+  Loader2, Pencil, X, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +53,7 @@ async function sendPasswordReset(email: string): Promise<void> {
 }
 
 export default function AdminPage() {
-  const { profile, logout } = useAuth();
+  const { profile, logout, enterSupportMode } = useAuth();
   const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -433,6 +433,17 @@ export default function AdminPage() {
                         >
                           {fixAuthLoading === t.id ? <Loader2 size={11} className="animate-spin" /> : null}
                           תקן Auth
+                        </button>
+                        <button
+                          onClick={() => {
+                            enterSupportMode(t.id, t.name);
+                            router.push("/");
+                          }}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg text-[#753991] hover:bg-[#753991]/10 transition-colors flex items-center gap-1"
+                          title="כנס למערכת כאילו אתה הלקוח הזה"
+                        >
+                          <ShieldAlert size={11} />
+                          כנס כלקוח
                         </button>
                         <button
                           onClick={() => toggleActive(t)}

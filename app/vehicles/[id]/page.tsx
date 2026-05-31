@@ -26,8 +26,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     addVehicleInsurance, deleteVehicleInsurance,
   } = useStore();
 
-  const { profile } = useAuth();
-  const tenantId = profile?.tenantId ?? "default";
+  const { effectiveTenantId } = useAuth();
+  const tenantId = effectiveTenantId ?? "default";
 
   const vehicle = vehicles.find(v => v.id === id);
   const [showEdit, setShowEdit] = useState(false);
