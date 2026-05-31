@@ -184,6 +184,19 @@ function StatusManager() {
             {item.isDefault && (
               <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">ברירת מחדל</span>
             )}
+            {/* Operational toggle */}
+            <button
+              title={item.isOperational ? "סטטוס תפעולי — לחץ לשינוי" : "סטטוס לא תפעולי — לחץ לשינוי"}
+              onClick={() => updateStatus(item.id, { isOperational: !item.isOperational })}
+              className={cn(
+                "text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors",
+                item.isOperational
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
+                  : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+              )}
+            >
+              {item.isOperational ? "תפעולי ✓" : "לא תפעולי"}
+            </button>
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => { setEditingId(item.id); setEditColor(item.color); }}
@@ -415,7 +428,7 @@ export default function SettingsPage() {
           <>
             <div className="mb-4">
               <h2 className="text-base font-bold text-[#032147]">סטטוסים</h2>
-              <p className="text-xs text-gray-400 mt-0.5">לחץ עריכה לשינוי שם או צבע. לא ניתן למחוק ברירת מחדל.</p>
+              <p className="text-xs text-gray-400 mt-0.5">לחץ עריכה לשינוי שם/צבע. לחץ על "תפעולי/לא תפעולי" לקביעת הדשבורד. לא ניתן למחוק ברירת מחדל.</p>
             </div>
             <StatusManager />
           </>

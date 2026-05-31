@@ -67,7 +67,14 @@ export default function DashboardPage() {
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map(s => ({ ...s, count: vehicles.filter(v => v.statusId === s.id).length }));
   const defaultStatus = vehicleStatuses.find(s => s.isDefault);
-  const activeCount   = vehicles.filter(v => v.statusId === defaultStatus?.id).length;
+  // רכבים תפעוליים = סטטוסים המסומנים כ-isOperational (זמין + בשימוש)
+  // fallback לשמות ברירת מחדל אם isOperational לא הוגדר (נתונים ישנים)
+  const operationalStatuses = vehicleStatuses.filter(s =>
+    s.isOperational === true ||
+    (s.isOperational === undefined && (s.name === "זמין" || s.name === "בשימוש"))
+  );
+  const operationalIds = new Set(operationalStatuses.map(s => s.id));
+  const activeCount = vehicles.filter(v => operationalIds.has(v.statusId)).length;
   const companyOwned   = vehicles.filter(v => v.ownershipType === "company_owned").length;
   const leasing        = vehicles.filter(v => v.ownershipType === "leasing").length;
   const fuelSplit      = fuelTypes.map(ft => ({
@@ -138,7 +145,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-1">בריאות הצי</p>
             <p className="text-sm text-white/80">
-              {activeCount} מתוך {vehicles.length} רכבים פעילים
+              {activeCount} מתוך {vehicles.length} רכבים זמינים תפעולית
             </p>
           </div>
           <div className="text-right">

@@ -126,6 +126,7 @@ export type VehicleStatus = {
   color: string;
   isDefault: boolean;
   sortOrder: number;
+  isOperational?: boolean; // true = הרכב זמין תפעולית (זמין/בשימוש), false = לא זמין (בטיפול/מושבת)
 };
 
 export type VehicleType = {

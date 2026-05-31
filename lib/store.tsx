@@ -33,10 +33,10 @@ import type {
 
 // ── Default seed data for new tenants ──────────────────────────────────────────
 const DEFAULT_STATUSES: Omit<VehicleStatus, "id">[] = [
-  { name: "זמין", color: "#22c55e", isDefault: true, sortOrder: 0 },
-  { name: "בשימוש", color: "#209dd7", isDefault: false, sortOrder: 1 },
-  { name: "בטיפול", color: "#f59e0b", isDefault: false, sortOrder: 2 },
-  { name: "מושבת", color: "#ef4444", isDefault: false, sortOrder: 3 },
+  { name: "זמין",   color: "#22c55e", isDefault: true,  sortOrder: 0, isOperational: true  },
+  { name: "בשימוש", color: "#209dd7", isDefault: false, sortOrder: 1, isOperational: true  },
+  { name: "בטיפול", color: "#f59e0b", isDefault: false, sortOrder: 2, isOperational: false },
+  { name: "מושבת",  color: "#ef4444", isDefault: false, sortOrder: 3, isOperational: false },
 ];
 const DEFAULT_VEHICLE_TYPES = ["רכב פרטי", "רכב מסחרי", "משאית", "אוטובוס", "קטנוע"];
 const DEFAULT_FUEL_TYPES = ["בנזין", "דיזל", "חשמלי", "היברידי", "גז"];
