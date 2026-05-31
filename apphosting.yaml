@@ -15,3 +15,5 @@ env:
     secret: GMAIL_USER
   - variable: GMAIL_APP_PASSWORD
     secret: GMAIL_APP_PASSWORD
+  - variable: NEXT_PUBLIC_APP_URL
+    value: https://fleet-manager--vehicle-management-syste-3b7df.europe-west4.hosted.app
