@@ -11,7 +11,8 @@ import {
   writeBatch,
   Unsubscribe,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, storage } from "./firebase";
+import { ref, deleteObject } from "firebase/storage";
 import { useAuth } from "./auth";
 import type {
   AppState,
@@ -257,8 +258,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [col]);
 
   const deleteDocument = useCallback(async (id: string) => {
+    // Also delete from Firebase Storage if storagePath exists
+    const docSnap = state.documents.find(d => d.id === id);
+    if (docSnap?.storagePath) {
+      try { await deleteObject(ref(storage, docSnap.storagePath)); } catch { /* ignore if already deleted */ }
+    }
     await deleteDoc(docRef("documents", id));
-  }, [docRef]);
+  }, [docRef, state.documents]);
 
   // ── Assignments ───────────────────────────────────────────────────────────────
   const assignDriverToVehicle = useCallback(async (driverId: string, vehicleId: string) => {

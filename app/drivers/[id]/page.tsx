@@ -1,15 +1,18 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useRef } from "react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Edit, AlertTriangle, FileText, Car, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Edit, AlertTriangle, FileText, Car, Trash2, Upload, Eye, Download, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import type { Driver } from "@/types";
 
 function DriverEditForm({ driver, onSave, onCancel }: { driver: Driver; onSave: (d: Partial<Driver>) => void; onCancel: () => void }) {
@@ -47,11 +50,16 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
   const router = useRouter();
   const { drivers, vehicles, accidentCards, documents, vehicleStatuses, updateDriver, deleteDriver, deleteAccidentCard, deleteDocument, addDocument } = useStore();
 
+  const { profile } = useAuth();
+  const tenantId = profile?.tenantId ?? "default";
+
   const driver = drivers.find(d => d.id === id);
   const [showEdit, setShowEdit] = useState(false);
   const [deleteDriverConfirm, setDeleteDriverConfirm] = useState(false);
   const [deleteAcc, setDeleteAcc] = useState<string | null>(null);
   const [deleteDoc, setDeleteDoc] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!driver) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -179,17 +187,30 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
             <FileText size={15} className="text-purple-500" />
             <h2 className="text-sm font-semibold text-[#032147]">Documents ({driverDocs.length})</h2>
           </div>
-          <label className="cursor-pointer">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700">
-              <Upload size={14} /> Upload
-            </span>
-            <input type="file" className="hidden" onChange={e => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              addDocument({ name: file.name.replace(/\.[^.]+$/, ""), type: "driver_license_copy", relatedEntityType: "driver", relatedEntityId: id, fileName: file.name });
+          <button
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 disabled:opacity-50"
+          >
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? "מעלה..." : "Upload"}
+          </button>
+          <input ref={fileInputRef} type="file" className="hidden" onChange={async e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setUploading(true);
+            try {
+              const storagePath = `tenants/${tenantId}/documents/${Date.now()}_${file.name}`;
+              const storageRef = ref(storage, storagePath);
+              const task = uploadBytesResumable(storageRef, file);
+              await new Promise<void>((res, rej) => task.on("state_changed", undefined, rej, res));
+              const fileUrl = await getDownloadURL(task.snapshot.ref);
+              await addDocument({ name: file.name.replace(/\.[^.]+$/, ""), type: "driver_license_copy", relatedEntityType: "driver", relatedEntityId: id, fileName: file.name, fileUrl, storagePath });
+            } finally {
+              setUploading(false);
               e.target.value = "";
-            }} />
-          </label>
+            }
+          }} />
         </CardHeader>
         <div className="divide-y divide-gray-50">
           {driverDocs.length === 0 && <div className="px-5 py-4 text-sm text-gray-400">No documents attached.</div>}
@@ -199,9 +220,21 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
                 <div className="text-sm font-medium text-gray-800">{doc.name}</div>
                 <div className="text-xs text-gray-400">{doc.fileName} · {formatDate(doc.uploadedAt)}</div>
               </div>
-              <button onClick={() => setDeleteDoc(doc.id)} className="p-1 hover:bg-red-50 rounded text-gray-300 hover:text-red-400">
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center gap-1">
+                {doc.fileUrl && (
+                  <>
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" title="צפה" className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-300 hover:text-[#209dd7] transition-colors">
+                      <Eye size={14} />
+                    </a>
+                    <a href={doc.fileUrl} download={doc.fileName} title="הורד" className="p-1.5 rounded-lg hover:bg-green-50 text-gray-300 hover:text-green-600 transition-colors">
+                      <Download size={14} />
+                    </a>
+                  </>
+                )}
+                <button onClick={() => setDeleteDoc(doc.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

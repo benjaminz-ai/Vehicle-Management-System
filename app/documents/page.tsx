@@ -1,12 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { Select } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
-import { Upload, Trash2, Search, FileText } from "lucide-react";
+import { Upload, Trash2, Search, FileText, Download, Eye, Loader2 } from "lucide-react";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { useAuth } from "@/lib/auth";
 import type { DocumentType, RelatedEntityType } from "@/types";
 
 const DOC_TYPES: { value: DocumentType; label: string }[] = [
@@ -21,9 +24,10 @@ const DOC_TYPES: { value: DocumentType; label: string }[] = [
   { value: "other", label: "אחר" },
 ];
 
-function UploadForm({ onSave, onCancel }: {
-  onSave: (d: { name: string; type: DocumentType; relatedEntityType: RelatedEntityType; relatedEntityId: string; fileName: string; notes?: string }) => void;
+function UploadForm({ onSave, onCancel, tenantId }: {
+  onSave: (d: { name: string; type: DocumentType; relatedEntityType: RelatedEntityType; relatedEntityId: string; fileName: string; fileUrl: string; storagePath: string; notes?: string }) => void;
   onCancel: () => void;
+  tenantId: string;
 }) {
   const { vehicles, drivers, serviceRecords, accidentCards } = useStore();
   const [form, setForm] = useState({
@@ -31,9 +35,13 @@ function UploadForm({ onSave, onCancel }: {
     type: "other" as DocumentType,
     relatedEntityType: "vehicle" as RelatedEntityType,
     relatedEntityId: "",
-    fileName: "",
     notes: "",
   });
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function set(k: keyof typeof form, v: string) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -50,27 +58,84 @@ function UploadForm({ onSave, onCancel }: {
     });
   };
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.relatedEntityId || !form.fileName) return;
-    onSave({ ...form, name: form.name || form.fileName, notes: form.notes || "" });
+    if (!file || !form.relatedEntityId) return;
+    setError("");
+    setUploading(true);
+
+    try {
+      const storagePath = `tenants/${tenantId}/documents/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          "state_changed",
+          snap => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+          reject,
+          resolve
+        );
+      });
+
+      const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
+      onSave({
+        ...form,
+        name: form.name || file.name.replace(/\.[^.]+$/, ""),
+        fileName: file.name,
+        fileUrl,
+        storagePath,
+        notes: form.notes || "",
+      });
+    } catch {
+      setError("שגיאה בהעלאת הקובץ. נסה שנית.");
+      setUploading(false);
+    }
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <label className="block">
-        <span className="text-sm font-medium text-gray-700">Select File</span>
-        <div className="mt-1 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-[#209dd7] transition-colors">
-          <input type="file" className="hidden" id="fileInput" onChange={e => {
-            const file = e.target.files?.[0];
-            if (file) { set("fileName", file.name); if (!form.name) set("name", file.name.replace(/\.[^.]+$/, "")); }
-          }} />
-          <label htmlFor="fileInput" className="cursor-pointer">
-            <FileText size={24} className="mx-auto text-gray-300 mb-2" />
-            {form.fileName ? <span className="text-sm text-[#032147] font-medium">{form.fileName}</span> : <span className="text-sm text-gray-400">לחץ לבחירת קובץ</span>}
-          </label>
+      {/* File picker */}
+      <div>
+        <span className="text-sm font-medium text-gray-700 block mb-1">בחר קובץ</span>
+        <div
+          className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer hover:border-[#209dd7] transition-colors"
+          onClick={() => fileRef.current?.click()}
+        >
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) {
+                setFile(f);
+                if (!form.name) set("name", f.name.replace(/\.[^.]+$/, ""));
+              }
+            }}
+          />
+          <FileText size={24} className="mx-auto text-gray-300 mb-2" />
+          {file
+            ? <span className="text-sm text-[#032147] font-medium">{file.name}</span>
+            : <span className="text-sm text-gray-400">לחץ לבחירת קובץ</span>
+          }
         </div>
-      </label>
+      </div>
+
+      {/* Upload progress */}
+      {uploading && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>מעלה...</span><span>{progress}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-[#209dd7] rounded-full transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select label="סוג מסמך" value={form.type} onChange={e => set("type", e.target.value as DocumentType)}>
           {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -87,8 +152,10 @@ function UploadForm({ onSave, onCancel }: {
         {entityOptions().map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
       </Select>
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onCancel} type="button">Cancel</Button>
-        <Button type="submit" disabled={!form.fileName || !form.relatedEntityId}>העלה מסמך</Button>
+        <Button variant="outline" onClick={onCancel} type="button" disabled={uploading}>ביטול</Button>
+        <Button type="submit" disabled={!file || !form.relatedEntityId || uploading}>
+          {uploading ? <><Loader2 size={14} className="animate-spin" /> מעלה...</> : <><Upload size={14} /> העלה מסמך</>}
+        </Button>
       </div>
     </form>
   );
@@ -96,6 +163,8 @@ function UploadForm({ onSave, onCancel }: {
 
 export default function DocumentsPage() {
   const { documents, vehicles, drivers, serviceRecords, accidentCards, addDocument, deleteDocument } = useStore();
+  const { profile } = useAuth();
+  const tenantId = profile?.tenantId ?? "default";
   const [typeFilter, setTypeFilter] = useState("");
   const [entityFilter, setEntityFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -198,9 +267,32 @@ export default function DocumentsPage() {
                 <td className="px-4 py-3 text-xs text-gray-600">{getEntityLabel(doc)}</td>
                 <td className="px-4 py-3 text-xs text-gray-500">{formatDate(doc.uploadedAt)}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => setDeleteTarget(doc.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {doc.fileUrl && (
+                      <>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="צפה במסמך"
+                          className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-[#209dd7] transition-colors"
+                        >
+                          <Eye size={14} />
+                        </a>
+                        <a
+                          href={doc.fileUrl}
+                          download={doc.fileName}
+                          title="הורד מסמך"
+                          className="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors"
+                        >
+                          <Download size={14} />
+                        </a>
+                      </>
+                    )}
+                    <button onClick={() => setDeleteTarget(doc.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -213,7 +305,11 @@ export default function DocumentsPage() {
       </div>
 
       <Dialog open={showUpload} onClose={() => setShowUpload(false)} title="העלאת מסמך" size="md">
-        <UploadForm onSave={d => { addDocument(d); setShowUpload(false); }} onCancel={() => setShowUpload(false)} />
+        <UploadForm
+          tenantId={tenantId}
+          onSave={d => { addDocument(d); setShowUpload(false); }}
+          onCancel={() => setShowUpload(false)}
+        />
       </Dialog>
 
       <ConfirmDialog

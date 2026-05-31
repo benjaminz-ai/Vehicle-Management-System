@@ -93,6 +93,8 @@ export type DocumentRecord = {
   relatedEntityId: string;
   uploadedAt: string;
   fileName: string;
+  fileUrl?: string;       // Firebase Storage download URL
+  storagePath?: string;   // Firebase Storage path (for deletion)
   notes?: string;
 };
 
