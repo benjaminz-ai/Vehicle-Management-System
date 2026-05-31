@@ -147,7 +147,7 @@ export default function VehiclesPage() {
       <Dialog open={showAdd} onClose={() => setShowAdd(false)} title="הוספת רכב" size="lg">
         <VehicleForm
           onSave={data => {
-            addVehicle({ ...data, serviceRecordIds: [], accidentIds: [], documentIds: [] });
+            addVehicle({ ...data, serviceRecordIds: [], accidentIds: [], documentIds: [], secondaryDriverIds: [] });
             setShowAdd(false);
           }}
           onCancel={() => setShowAdd(false)}
