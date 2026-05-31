@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import {
   Car, Users, Wrench, AlertTriangle, FileText,
-  TrendingUp, ArrowRight,
+  TrendingUp, ArrowRight, Bell, Shield, Calendar,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -47,7 +47,19 @@ export default function DashboardPage() {
   const {
     vehicles, drivers, serviceRecords, accidentCards,
     documents, vehicleStatuses, fuelTypes,
+    vehicleInsurances, insuranceTypes, insuranceCompanies,
   } = useStore();
+
+  const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Alerts: expiring license or insurance within 30 days (for vehicles with alerts enabled)
+  const expiringLicenses = vehicles.filter(v => v.alertsEnabled !== false && v.licenseExpiry && v.licenseExpiry <= in30);
+  const expiringInsurances = vehicleInsurances.filter(ins => {
+    const v = vehicles.find(x => x.id === ins.vehicleId);
+    return v?.alertsEnabled !== false && ins.endDate <= in30;
+  });
+  const totalAlerts = expiringLicenses.length + expiringInsurances.length;
 
   const openAccidents  = accidentCards.filter(a => a.status !== "closed").length;
   // Count per status — dynamic, covers all statuses
@@ -80,6 +92,31 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+
+      {/* ── Alerts banner ────────────────────────────────────────────────── */}
+      {totalAlerts > 0 && (
+        <Link href="/alerts">
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 cursor-pointer hover:bg-amber-100 transition-colors">
+            <div className="w-8 h-8 rounded-xl bg-amber-400 flex items-center justify-center shrink-0">
+              <Bell size={15} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-900">
+                {totalAlerts} התראות פעילות — ביטוחים ורישויים מתקרבים לפקיעה
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5 flex gap-3 flex-wrap">
+                {expiringLicenses.length > 0 && (
+                  <span className="flex items-center gap-1"><Calendar size={11} /> {expiringLicenses.length} רישויים</span>
+                )}
+                {expiringInsurances.length > 0 && (
+                  <span className="flex items-center gap-1"><Shield size={11} /> {expiringInsurances.length} ביטוחים</span>
+                )}
+              </p>
+            </div>
+            <ArrowRight size={16} className="text-amber-600 shrink-0" />
+          </div>
+        </Link>
+      )}
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex items-end justify-between">

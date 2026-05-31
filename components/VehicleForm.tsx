@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, Bell } from "lucide-react";
 import type { Vehicle } from "@/types";
 
 type VehicleFormData = Omit<Vehicle, "id" | "serviceRecordIds" | "accidentIds" | "documentIds" | "secondaryDriverIds">;
@@ -20,6 +20,8 @@ const defaultData: VehicleFormData = {
   mainDriverId: "",
   statusId: "",
   mileage: 0,
+  licenseExpiry: "",
+  alertsEnabled: true,
 };
 
 export function VehicleForm({
@@ -46,7 +48,7 @@ export function VehicleForm({
   });
   const [errors, setErrors] = useState<Partial<Record<keyof VehicleFormData, string>>>({});
 
-  function set(k: keyof VehicleFormData, v: string | number) {
+  function set(k: keyof VehicleFormData, v: string | number | boolean) {
     setForm(f => ({ ...f, [k]: v }));
     setErrors(e => ({ ...e, [k]: undefined }));
   }
@@ -261,6 +263,31 @@ export function VehicleForm({
           onChange={e => set("mileage", Number(e.target.value))}
         />
       </div>
+      {/* License expiry + alerts */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input
+          label="תאריך טסט רישוי"
+          type="date"
+          value={form.licenseExpiry ?? ""}
+          onChange={e => set("licenseExpiry", e.target.value)}
+        />
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">התראות פקיעה</label>
+          <button
+            type="button"
+            onClick={() => set("alertsEnabled", !form.alertsEnabled)}
+            className={`flex items-center gap-2 h-10 px-3 rounded-xl border text-sm font-medium transition-all ${
+              form.alertsEnabled
+                ? "border-[#209dd7] bg-[#209dd7]/5 text-[#209dd7]"
+                : "border-gray-200 text-gray-400 hover:border-gray-300"
+            }`}
+          >
+            <Bell size={14} />
+            {form.alertsEnabled ? "התראות פעילות" : "התראות כבויות"}
+          </button>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onCancel} type="button">ביטול</Button>
         <Button type="submit">שמור רכב</Button>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { VehicleForm } from "@/components/VehicleForm";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2, Shield, Plus, Bell, BellOff, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { storage } from "@/lib/firebase";
@@ -21,7 +21,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const {
     vehicles, drivers, serviceRecords, accidentCards, documents,
     vehicleStatuses, vehicleTypes, fuelTypes,
+    vehicleInsurances, insuranceTypes, insuranceCompanies,
     updateVehicle, deleteVehicle, deleteServiceRecord, deleteAccidentCard, deleteDocument, addDocument,
+    addVehicleInsurance, deleteVehicleInsurance,
   } = useStore();
 
   const { profile } = useAuth();
@@ -35,6 +37,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const [deleteDoc, setDeleteDoc] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAddInsurance, setShowAddInsurance] = useState(false);
+  const [insForm, setInsForm] = useState({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" });
 
   if (!vehicle) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -260,6 +264,130 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           ))}
         </div>
       </Card>
+
+      {/* Insurance section */}
+      {(() => {
+        const vInsurances = vehicleInsurances.filter(i => i.vehicleId === id);
+        const today = new Date().toISOString().slice(0, 10);
+        return (
+          <Card>
+            <CardHeader className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield size={16} className="text-[#209dd7]" />
+                <h2 className="text-sm font-semibold text-[#032147]">ביטוחים ({vInsurances.length})</h2>
+              </div>
+              <button
+                onClick={() => setShowAddInsurance(v => !v)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700"
+              >
+                <Plus size={14} /> הוסף ביטוח
+              </button>
+            </CardHeader>
+
+            {showAddInsurance && (
+              <div className="px-5 py-4 border-b border-gray-50 bg-[#f8fafc] space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">סוג ביטוח</label>
+                    <select
+                      className="h-9 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                      value={insForm.insuranceTypeId}
+                      onChange={e => setInsForm(f => ({ ...f, insuranceTypeId: e.target.value }))}
+                    >
+                      <option value="">בחר סוג...</option>
+                      {insuranceTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">חברת ביטוח</label>
+                    <select
+                      className="h-9 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                      value={insForm.insuranceCompanyId}
+                      onChange={e => setInsForm(f => ({ ...f, insuranceCompanyId: e.target.value }))}
+                    >
+                      <option value="">בחר חברה...</option>
+                      {insuranceCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">תאריך התחלה</label>
+                    <input type="date" className="h-9 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                      value={insForm.startDate} onChange={e => setInsForm(f => ({ ...f, startDate: e.target.value }))} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-600">תאריך פקיעה</label>
+                    <input type="date" className="h-9 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                      value={insForm.endDate} onChange={e => setInsForm(f => ({ ...f, endDate: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!insForm.insuranceTypeId || !insForm.startDate || !insForm.endDate) return;
+                      await addVehicleInsurance({ vehicleId: id, ...insForm });
+                      setInsForm({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" });
+                      setShowAddInsurance(false);
+                    }}
+                    disabled={!insForm.insuranceTypeId || !insForm.startDate || !insForm.endDate}
+                    className="px-4 h-8 rounded-xl bg-[#032147] text-white text-sm font-medium hover:bg-[#032147]/80 disabled:opacity-40 transition-colors"
+                  >שמור ביטוח</button>
+                  <button onClick={() => setShowAddInsurance(false)} className="px-4 h-8 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">ביטול</button>
+                </div>
+              </div>
+            )}
+
+            <div className="divide-y divide-gray-50">
+              {vInsurances.length === 0 && <div className="px-5 py-4 text-sm text-gray-400">אין ביטוחים רשומים לרכב זה.</div>}
+              {vInsurances.map(ins => {
+                const insType = insuranceTypes.find(t => t.id === ins.insuranceTypeId);
+                const insCompany = insuranceCompanies.find(c => c.id === ins.insuranceCompanyId);
+                const expired = ins.endDate < today;
+                const expiringSoon = !expired && ins.endDate <= new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+                return (
+                  <div key={ins.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${expired ? "bg-red-400" : expiringSoon ? "bg-amber-400" : "bg-emerald-400"}`} />
+                      <div>
+                        <div className="text-sm font-medium text-[#032147]">{insType?.name ?? "—"}</div>
+                        <div className="text-xs text-gray-400">
+                          {insCompany?.name && <span>{insCompany.name} · </span>}
+                          {formatDate(ins.startDate)} — {formatDate(ins.endDate)}
+                          {expired && <span className="text-red-500 font-semibold mr-1"> · פג תוקף</span>}
+                          {expiringSoon && <span className="text-amber-500 font-semibold mr-1"> · פג בקרוב</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => deleteVehicleInsurance(ins.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        );
+      })()}
+
+      {/* License expiry info */}
+      {vehicle.licenseExpiry && (
+        <div className={`rounded-2xl p-4 flex items-center gap-3 ${
+          vehicle.licenseExpiry < new Date().toISOString().slice(0,10) ? "bg-red-50 border border-red-100" :
+          vehicle.licenseExpiry <= new Date(Date.now() + 30*864e5).toISOString().slice(0,10) ? "bg-amber-50 border border-amber-100" :
+          "bg-emerald-50 border border-emerald-100"
+        }`}>
+          <Calendar size={18} className="shrink-0 text-gray-500" />
+          <div>
+            <div className="text-sm font-semibold text-[#032147]">טסט רישוי: {formatDate(vehicle.licenseExpiry)}</div>
+            <div className="text-xs text-gray-500">
+              {vehicle.licenseExpiry < new Date().toISOString().slice(0,10) ? "פג תוקף הרישוי!" :
+               vehicle.licenseExpiry <= new Date(Date.now() + 30*864e5).toISOString().slice(0,10) ? "הרישוי פג בקרוב" :
+               "הרישוי בתוקף"}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={showEdit} onClose={() => setShowEdit(false)} title="Edit Vehicle" size="lg">
         <VehicleForm

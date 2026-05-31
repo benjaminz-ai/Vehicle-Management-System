@@ -13,6 +13,7 @@ import {
   History,
   Settings,
   X,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +40,8 @@ const navGroups = [
       { href: "/accidents", label: "תאונות", icon: AlertTriangle },
       { href: "/documents", label: "מסמכים", icon: FileText },
       { href: "/history", label: "היסטוריית שיבוצים", icon: History },
-      { href: "/settings", label: "הגדרות רכבים", icon: Settings },
+      { href: "/alerts", label: "התראות", icon: Bell },
+      { href: "/settings", label: "הגדרות", icon: Settings },
     ],
   },
 ];

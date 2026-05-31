@@ -38,9 +38,31 @@ export type Vehicle = {
   secondaryDriverIds: string[];
   statusId: string;
   mileage: number;
+  licenseExpiry?: string;   // תאריך מבחן רישוי
+  alertsEnabled?: boolean;  // התראות לביטוח/רישוי
   serviceRecordIds: string[];
   accidentIds: string[];
   documentIds: string[];
+};
+
+export type InsuranceCompany = {
+  id: string;
+  name: string;
+};
+
+export type InsuranceType = {
+  id: string;
+  name: string;
+};
+
+export type VehicleInsurance = {
+  id: string;
+  vehicleId: string;
+  insuranceTypeId: string;
+  insuranceCompanyId: string;
+  startDate: string;
+  endDate: string;
+  notes?: string;
 };
 
 export type Driver = {
@@ -129,10 +151,13 @@ export type AppState = {
   serviceRecords: ServiceRecord[];
   accidentCards: AccidentCard[];
   documents: DocumentRecord[];
+  vehicleInsurances: VehicleInsurance[];
   vehicleStatuses: VehicleStatus[];
   vehicleTypes: VehicleType[];
   fuelTypes: FuelType[];
   manufacturers: Manufacturer[];
+  insuranceCompanies: InsuranceCompany[];
+  insuranceTypes: InsuranceType[];
 };
 
 export type AssignmentLog = {

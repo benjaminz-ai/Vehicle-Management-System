@@ -26,6 +26,9 @@ import type {
   FuelType,
   Manufacturer,
   AssignmentLog,
+  InsuranceCompany,
+  InsuranceType,
+  VehicleInsurance,
 } from "@/types";
 
 // ── Default seed data for new tenants ──────────────────────────────────────────
@@ -38,6 +41,7 @@ const DEFAULT_STATUSES: Omit<VehicleStatus, "id">[] = [
 const DEFAULT_VEHICLE_TYPES = ["רכב פרטי", "רכב מסחרי", "משאית", "אוטובוס", "קטנוע"];
 const DEFAULT_FUEL_TYPES = ["בנזין", "דיזל", "חשמלי", "היברידי", "גז"];
 const DEFAULT_MANUFACTURERS = ["טויוטה", "יונדאי", "פורד", "קיה", "מאזדה", "ניסאן", "פולקסווגן", "מיצובישי"];
+const DEFAULT_INSURANCE_TYPES = ["ביטוח חובה", "ביטוח צד ג'", "ביטוח מקיף"];
 
 // Returns "YYYY-MM-DD HH:mm" in Israel local time (Asia/Jerusalem, handles DST)
 const nowIsrael = () =>
@@ -79,6 +83,16 @@ type StoreContextType = AppState & {
   removeModelFromManufacturer: (manufacturerId: string, model: string) => Promise<void>;
   assignDriverToVehicle: (driverId: string, vehicleId: string) => Promise<void>;
   unassignDriverFromVehicle: (driverId: string, vehicleId: string) => Promise<void>;
+  // Insurance
+  addInsuranceCompany: (name: string) => Promise<void>;
+  updateInsuranceCompany: (id: string, name: string) => Promise<void>;
+  deleteInsuranceCompany: (id: string) => Promise<void>;
+  addInsuranceType: (name: string) => Promise<void>;
+  updateInsuranceType: (id: string, name: string) => Promise<void>;
+  deleteInsuranceType: (id: string) => Promise<void>;
+  addVehicleInsurance: (ins: Omit<VehicleInsurance, "id">) => Promise<void>;
+  updateVehicleInsurance: (id: string, ins: Partial<VehicleInsurance>) => Promise<void>;
+  deleteVehicleInsurance: (id: string) => Promise<void>;
 };
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -89,10 +103,13 @@ const emptyState: AppState = {
   serviceRecords: [],
   accidentCards: [],
   documents: [],
+  vehicleInsurances: [],
   vehicleStatuses: [],
   vehicleTypes: [],
   fuelTypes: [],
   manufacturers: [],
+  insuranceCompanies: [],
+  insuranceTypes: [],
   assignmentLogs: [],
 };
 
@@ -120,6 +137,10 @@ export async function seedTenant(tenantId: string) {
   });
   DEFAULT_MANUFACTURERS.forEach(name => {
     const ref = doc(collection(db, `${base}/manufacturers`));
+    batch.set(ref, { name });
+  });
+  DEFAULT_INSURANCE_TYPES.forEach(name => {
+    const ref = doc(collection(db, `${base}/insuranceTypes`));
     batch.set(ref, { name });
   });
 
@@ -158,10 +179,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     sub("accidentCards", "accidentCards");
     sub("documents", "documents");
     sub("assignmentLogs", "assignmentLogs");
+    sub("vehicleInsurances", "vehicleInsurances");
     sub("vehicleStatuses", "vehicleStatuses");
     sub("vehicleTypes", "vehicleTypes");
     sub("fuelTypes", "fuelTypes");
     sub("manufacturers", "manufacturers");
+    sub("insuranceCompanies", "insuranceCompanies");
+    sub("insuranceTypes", "insuranceTypes");
 
     setStoreLoading(false);
 
@@ -428,6 +452,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(docRef("manufacturers", manufacturerId), { models: existing.filter(m => m !== model) });
   }, [docRef, state.manufacturers]);
 
+  // ── Insurance Companies ────────────────────────────────────────────────────────
+  const addInsuranceCompany    = useCallback(async (name: string) => { await addDoc(col("insuranceCompanies"), { name }); }, [col]);
+  const updateInsuranceCompany = useCallback(async (id: string, name: string) => { await updateDoc(docRef("insuranceCompanies", id), { name }); }, [docRef]);
+  const deleteInsuranceCompany = useCallback(async (id: string) => { await deleteDoc(docRef("insuranceCompanies", id)); }, [docRef]);
+
+  // ── Insurance Types ────────────────────────────────────────────────────────────
+  const addInsuranceType    = useCallback(async (name: string) => { await addDoc(col("insuranceTypes"), { name }); }, [col]);
+  const updateInsuranceType = useCallback(async (id: string, name: string) => { await updateDoc(docRef("insuranceTypes", id), { name }); }, [docRef]);
+  const deleteInsuranceType = useCallback(async (id: string) => { await deleteDoc(docRef("insuranceTypes", id)); }, [docRef]);
+
+  // ── Vehicle Insurances ────────────────────────────────────────────────────────
+  const addVehicleInsurance    = useCallback(async (ins: Omit<VehicleInsurance, "id">) => { await addDoc(col("vehicleInsurances"), ins); }, [col]);
+  const updateVehicleInsurance = useCallback(async (id: string, ins: Partial<VehicleInsurance>) => { await updateDoc(docRef("vehicleInsurances", id), ins as Record<string, unknown>); }, [docRef]);
+  const deleteVehicleInsurance = useCallback(async (id: string) => { await deleteDoc(docRef("vehicleInsurances", id)); }, [docRef]);
+
   const value: StoreContextType = {
     ...state,
     storeLoading,
@@ -464,6 +503,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     deleteManufacturer,
     addModelToManufacturer,
     removeModelFromManufacturer,
+    addInsuranceCompany,
+    updateInsuranceCompany,
+    deleteInsuranceCompany,
+    addInsuranceType,
+    updateInsuranceType,
+    deleteInsuranceType,
+    addVehicleInsurance,
+    updateVehicleInsurance,
+    deleteVehicleInsurance,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

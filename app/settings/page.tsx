@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
 import {
-  Car, Fuel, Tag, Settings, Plus, Pencil, Trash2, Check, X, Circle,
+  Car, Fuel, Tag, Settings, Plus, Pencil, Trash2, Check, X, Circle, Shield, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -260,10 +260,12 @@ function StatusManager() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "manufacturers", label: "יצרנים", icon: Car },
-  { id: "vehicleTypes",  label: "סוגי רכב", icon: Tag },
-  { id: "fuelTypes",     label: "סוגי דלק", icon: Fuel },
-  { id: "statuses",      label: "סטטוסים",  icon: Circle },
+  { id: "manufacturers",      label: "יצרנים",        icon: Car },
+  { id: "vehicleTypes",       label: "סוגי רכב",      icon: Tag },
+  { id: "fuelTypes",          label: "סוגי דלק",      icon: Fuel },
+  { id: "statuses",           label: "סטטוסים",       icon: Circle },
+  { id: "insuranceCompanies", label: "חברות ביטוח",   icon: Building2 },
+  { id: "insuranceTypes",     label: "סוגי ביטוח",    icon: Shield },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -271,11 +273,13 @@ type TabId = typeof TABS[number]["id"];
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("manufacturers");
   const {
-    manufacturers, vehicleTypes, fuelTypes,
+    manufacturers, vehicleTypes, fuelTypes, insuranceCompanies, insuranceTypes,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addModelToManufacturer, removeModelFromManufacturer,
     addVehicleType, updateVehicleType, deleteVehicleType,
     addFuelType, updateFuelType, deleteFuelType,
+    addInsuranceCompany, updateInsuranceCompany, deleteInsuranceCompany,
+    addInsuranceType, updateInsuranceType, deleteInsuranceType,
   } = useStore();
   const [expandedMfr, setExpandedMfr] = useState<string | null>(null);
   const [newModel, setNewModel] = useState("");
@@ -288,19 +292,19 @@ export default function SettingsPage() {
           <Settings size={18} className="text-[#ecad0a]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#032147]">הגדרות רכבים</h1>
+          <h1 className="text-2xl font-bold text-[#032147]">הגדרות</h1>
           <p className="text-sm text-gray-500 mt-0.5">ניהול רשימות הגדרה של הצי</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1.5 shadow-sm">
+      <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1.5 shadow-sm overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-medium transition-all",
+              "shrink-0 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-sm font-medium transition-all",
               activeTab === id
                 ? "bg-[#032147] text-white shadow-sm"
                 : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
@@ -414,6 +418,38 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-400 mt-0.5">לחץ עריכה לשינוי שם או צבע. לא ניתן למחוק ברירת מחדל.</p>
             </div>
             <StatusManager />
+          </>
+        )}
+
+        {activeTab === "insuranceCompanies" && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-[#032147]">חברות ביטוח</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{insuranceCompanies.length} חברות מוגדרות</p>
+            </div>
+            <ListManager
+              items={insuranceCompanies}
+              onAdd={addInsuranceCompany}
+              onUpdate={updateInsuranceCompany}
+              onDelete={deleteInsuranceCompany}
+              placeholder="הוסף חברת ביטוח"
+            />
+          </>
+        )}
+
+        {activeTab === "insuranceTypes" && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-[#032147]">סוגי ביטוח</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{insuranceTypes.length} סוגים מוגדרים (ביטוח חובה, צד ג', מקיף וכו')</p>
+            </div>
+            <ListManager
+              items={insuranceTypes}
+              onAdd={addInsuranceType}
+              onUpdate={updateInsuranceType}
+              onDelete={deleteInsuranceType}
+              placeholder="הוסף סוג ביטוח"
+            />
           </>
         )}
       </div>
