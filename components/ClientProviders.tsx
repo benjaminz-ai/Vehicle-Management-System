@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { StoreProvider } from "@/lib/store";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { profile, loading } = useAuth();
+  const { profile, loading, supportTenant } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -19,13 +19,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const isResetPassword    = pathname === "/reset-password";
 
     if (!profile) {
-      // Not logged in → send to login (but allow /setup, /login, /forgot-password, /reset-password)
       if (!isLoginPage && !isSetupPage && !isForgotPassword && !isResetPassword) router.replace("/login");
       return;
     }
 
     if (profile.role === "super_admin") {
-      // Super admin belongs on /admin
+      // In support mode → allow navigating freely as a tenant
+      if (supportTenant) return;
+      // Otherwise, super_admin stays on /admin
       if (!isAdminPage) router.replace("/admin");
       return;
     }
@@ -34,7 +35,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isLoginPage || isAdminPage) {
       router.replace("/");
     }
-  }, [profile, loading, pathname, router]);
+  }, [profile, loading, pathname, router, supportTenant]);
 
   // Show nothing while checking auth
   if (loading) {
