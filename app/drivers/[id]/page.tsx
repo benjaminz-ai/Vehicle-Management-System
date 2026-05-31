@@ -27,7 +27,7 @@ function DriverEditForm({ driver, onSave, onCancel }: { driver: Driver; onSave: 
   }
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="First Name" value={form.firstName} onChange={e => set("firstName", e.target.value)} />
         <Input label="Last Name" value={form.lastName} onChange={e => set("lastName", e.target.value)} />
       </div>

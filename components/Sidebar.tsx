@@ -12,6 +12,7 @@ import {
   Network,
   History,
   Settings,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,23 +44,48 @@ const navGroups = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[220px] min-h-screen bg-[#032147] flex flex-col shrink-0">
+    <>
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={cn(
+        "w-[220px] min-h-screen bg-[#032147] flex flex-col shrink-0 z-50",
+        // Desktop: always visible
+        "md:relative md:translate-x-0 md:flex",
+        // Mobile: drawer from right (RTL)
+        "fixed top-0 right-0 h-full transition-transform duration-300 ease-in-out",
+        open ? "translate-x-0" : "translate-x-full md:translate-x-0"
+      )}>
       {/* Logo */}
       <div className="px-5 py-[18px] border-b border-white/[0.07]">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-[#ecad0a] flex items-center justify-center shrink-0">
             <Car size={15} className="text-[#032147]" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-white font-bold text-[13px] leading-tight">ניהול צי</div>
             <div className="text-[#ecad0a]/60 text-[10px] font-semibold tracking-widest uppercase mt-0.5">
               Fleet Manager
             </div>
           </div>
+          {/* Close button – mobile only */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden w-7 h-7 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -114,5 +140,6 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

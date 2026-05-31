@@ -65,7 +65,7 @@ function AccidentForm({ initial, onSave, onCancel }: {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select label="נהג" value={form.driverId} onChange={e => set("driverId", e.target.value)} error={errors.driverId}>
           <option value="">בחר נהג...</option>
           {drivers.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
@@ -77,7 +77,7 @@ function AccidentForm({ initial, onSave, onCancel }: {
           ))}
         </Select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="תאריך תאונה" type="date" value={form.accidentDate} onChange={e => set("accidentDate", e.target.value)} />
         <Input label="מיקום" value={form.location} onChange={e => set("location", e.target.value)} error={errors.location} placeholder="כביש, עיר..." />
       </div>
@@ -104,7 +104,7 @@ function AccidentForm({ initial, onSave, onCancel }: {
           placeholder="שם, רכב, ביטוח..."
         />
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="מספר דוח משטרה" value={form.policeReportNumber} onChange={e => set("policeReportNumber", e.target.value)} placeholder="אופציונלי" />
         <Input label="מספר תביעת ביטוח" value={form.insuranceClaimNumber} onChange={e => set("insuranceClaimNumber", e.target.value)} placeholder="אופציונלי" />
       </div>

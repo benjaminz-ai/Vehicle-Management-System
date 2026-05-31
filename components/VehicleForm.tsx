@@ -71,7 +71,7 @@ export function VehicleForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           label="לוחית רישוי"
           value={form.licensePlate}
@@ -86,7 +86,7 @@ export function VehicleForm({
           onChange={e => set("year", Number(e.target.value))}
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="יצרן"
           value={form.manufacturer}
@@ -122,7 +122,7 @@ export function VehicleForm({
           );
         })()}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="סוג רכב"
           value={form.vehicleTypeId}
@@ -142,7 +142,7 @@ export function VehicleForm({
           {fuelTypes.map(ft => <option key={ft.id} value={ft.id}>{ft.name}</option>)}
         </Select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="בעלות"
           value={form.ownershipType}
@@ -160,7 +160,7 @@ export function VehicleForm({
           />
         ) : <div />}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="נהג ראשי"
           value={form.mainDriverId}
@@ -171,7 +171,7 @@ export function VehicleForm({
           {drivers.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
         </Select>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label="סטטוס"
           value={form.statusId}

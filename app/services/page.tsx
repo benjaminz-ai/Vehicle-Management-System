@@ -51,14 +51,14 @@ function ServiceForm({ initial, onSave, onCancel }: {
           <option key={v.id} value={v.id}>{v.manufacturer} {v.model} ({v.licensePlate})</option>
         ))}
       </Select>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="תאריך טיפול" type="date" value={form.serviceDate} onChange={e => set("serviceDate", e.target.value)} />
         <Select label="סוג טיפול" value={form.serviceType} onChange={e => set("serviceType", e.target.value)}>
           {SERVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </Select>
       </div>
       <Input label="ספק / מוסך" value={form.providerName} onChange={e => set("providerName", e.target.value)} error={errors.providerName} placeholder="שם המוסך או הספק" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label='ק"מ בעת הטיפול' type="number" value={form.mileage} onChange={e => set("mileage", e.target.value)} />
         <Input label="עלות (₪)" type="number" value={form.cost} onChange={e => set("cost", e.target.value)} />
       </div>
@@ -107,10 +107,10 @@ export default function ServicesPage() {
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
-            className="pl-9 pr-4 h-9 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 focus:border-[#209dd7] transition-all"
+            className="w-full pl-9 pr-4 h-9 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 focus:border-[#209dd7] transition-all"
             placeholder="חיפוש..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -126,7 +126,8 @@ export default function ServicesPage() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[650px]">
           <thead>
             <tr className="border-b border-gray-50 bg-[#f8fafc]">
               <th className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">רכב</th>
@@ -191,6 +192,7 @@ export default function ServicesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Dialog open={showAdd} onClose={() => setShowAdd(false)} title="הוספת רשומת טיפול" size="lg">

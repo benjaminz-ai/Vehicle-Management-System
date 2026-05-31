@@ -199,7 +199,8 @@ export default function HistoryPage() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[550px]">
           <thead>
             <tr className="border-b border-gray-50 bg-[#f8fafc]">
               <th className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">נהג</th>
@@ -292,6 +293,7 @@ export default function HistoryPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Driver profile view hint */}

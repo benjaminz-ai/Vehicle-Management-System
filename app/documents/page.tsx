@@ -71,7 +71,7 @@ function UploadForm({ onSave, onCancel }: {
           </label>
         </div>
       </label>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select label="סוג מסמך" value={form.type} onChange={e => set("type", e.target.value as DocumentType)}>
           {DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </Select>
@@ -172,7 +172,8 @@ export default function DocumentsPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[550px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">שם המסמך</th>
@@ -208,6 +209,7 @@ export default function DocumentsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       <Dialog open={showUpload} onClose={() => setShowUpload(false)} title="העלאת מסמך" size="md">

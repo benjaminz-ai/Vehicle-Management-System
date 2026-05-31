@@ -1,11 +1,11 @@
 "use client";
 import { useState, useCallback } from "react";
-import { Search, X, Bell, LogOut } from "lucide-react";
+import { Search, X, Bell, LogOut, Menu } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
-export function Header() {
+export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const { vehicles, drivers, vehicleStatuses, vehicleTypes, fuelTypes } = useStore();
@@ -66,8 +66,15 @@ export function Header() {
     : "?";
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center px-6 gap-4 relative z-40">
-      <div className="relative flex-1 max-w-md">
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center px-3 sm:px-6 gap-3 relative z-40">
+      {/* Hamburger – mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors shrink-0"
+      >
+        <Menu size={18} />
+      </button>
+      <div className="relative flex-1 sm:flex-none sm:w-64 md:w-80 lg:max-w-md lg:flex-1">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
           className="w-full pl-9 pr-4 h-9 rounded-xl border border-gray-200 bg-[#f8fafc] text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#209dd7]/25 focus:border-[#209dd7] transition-all"

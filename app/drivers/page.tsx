@@ -46,7 +46,7 @@ function DriverForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           label="שם פרטי"
           value={form.firstName}
@@ -132,7 +132,7 @@ export default function DriversPage() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
           className="w-full pl-9 pr-4 h-9 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 focus:border-[#209dd7] transition-all"
@@ -144,7 +144,8 @@ export default function DriversPage() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-50 bg-[#f8fafc]">
               <th className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">נהג</th>
@@ -243,6 +244,7 @@ export default function DriversPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add dialog */}
