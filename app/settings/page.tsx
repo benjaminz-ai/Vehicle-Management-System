@@ -1,11 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import {
   Car, Fuel, Tag, Settings, Plus, Pencil, Trash2, Check, X, Circle, Shield, Building2,
+  Users, Mail, KeyRound, Loader2, UserCheck, UserX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // ── Inline editable row ───────────────────────────────────────────────────────
 function EditableRow({
@@ -271,8 +275,192 @@ function StatusManager() {
   );
 }
 
+// ── Users Manager (tenant_admin only) ────────────────────────────────────────
+type TenantUser = {
+  uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "tenant_admin" | "tenant_user";
+  isActive?: boolean;
+};
+
+function UsersManager({ tenantId, tenantName }: { tenantId: string; tenantName: string }) {
+  const [users, setUsers] = useState<TenantUser[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [resetLoading, setResetLoading] = useState<string | null>(null);
+
+  // Load all users in this tenant
+  useEffect(() => {
+    const q = query(collection(db, "users"), where("tenantId", "==", tenantId));
+    return onSnapshot(q, snap => {
+      setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as TenantUser)));
+    });
+  }, [tenantId]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setError(""); setSuccess("");
+    try {
+      // Create Firebase Auth user
+      const res = await fetch("/api/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "שגיאה");
+
+      // Create Firestore user profile
+      await setDoc(doc(db, "users", data.uid), {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        role: "tenant_user",
+        tenantId,
+        tenantName,
+        isActive: true,
+        createdAt: serverTimestamp(),
+      });
+
+      setSuccess(`${form.firstName} ${form.lastName} נוסף/ה בהצלחה`);
+      setForm({ firstName: "", lastName: "", email: "", password: "" });
+      setShowAdd(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "שגיאה");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleActive(u: TenantUser) {
+    await updateDoc(doc(db, "users", u.uid), { isActive: !u.isActive });
+  }
+
+  async function sendReset(u: TenantUser) {
+    setResetLoading(u.uid);
+    try {
+      const res = await fetch("/api/send-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: u.email }),
+      });
+      if (!res.ok) throw new Error("שגיאה");
+      setSuccess(`קישור לאיפוס סיסמה נשלח אל ${u.email}`);
+    } catch {
+      setError("שגיאה בשליחת המייל");
+    } finally {
+      setResetLoading(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-[#032147]">משתמשי הארגון</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{users.length} משתמשים רשומים</p>
+        </div>
+        <button
+          onClick={() => { setShowAdd(v => !v); setError(""); setSuccess(""); }}
+          className="flex items-center gap-1.5 text-sm font-medium text-[#209dd7] hover:text-[#1a7fb0] transition-colors"
+        >
+          <Plus size={14} /> הוסף משתמש
+        </button>
+      </div>
+
+      {/* Feedback */}
+      {success && <p className="text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2">{success}</p>}
+      {error   && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+      {/* Add form */}
+      {showAdd && (
+        <form onSubmit={handleAdd} className="border border-[#209dd7]/30 bg-[#209dd7]/5 rounded-xl p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-gray-500">שם פרטי</label>
+              <input required className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} placeholder="ישראל" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-gray-500">שם משפחה</label>
+              <input required className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+                value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} placeholder="ישראלי" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold text-gray-500">אימייל</label>
+            <input required type="email" className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+              value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="user@company.com" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold text-gray-500">סיסמה זמנית</label>
+            <input required type="password" minLength={6} className="h-9 px-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30"
+              value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="מינימום 6 תווים" />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={busy}
+              className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[#032147] text-white text-sm font-medium disabled:opacity-50 hover:bg-[#032147]/80 transition-colors">
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              {busy ? "מוסיף..." : "הוסף עובד"}
+            </button>
+            <button type="button" onClick={() => setShowAdd(false)}
+              className="h-9 px-4 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
+              ביטול
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Users list */}
+      <div className="space-y-1.5">
+        {users.map(u => (
+          <div key={u.uid} className={cn("flex items-center gap-3 px-3 py-3 rounded-xl transition-colors", u.isActive === false ? "bg-gray-50 opacity-60" : "hover:bg-gray-50")}>
+            {/* Avatar */}
+            <div className="w-8 h-8 rounded-xl bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-xs shrink-0">
+              {u.firstName?.[0]}{u.lastName?.[0]}
+            </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[#032147]">{u.firstName} {u.lastName}</span>
+                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+                  u.role === "tenant_admin" ? "bg-[#032147]/10 text-[#032147]" : "bg-gray-100 text-gray-500")}>
+                  {u.role === "tenant_admin" ? "מנהל" : "משתמש"}
+                </span>
+                {u.isActive === false && <span className="text-[10px] text-red-500 font-semibold">מושבת</span>}
+              </div>
+              <div className="text-xs text-gray-400 mt-0.5">{u.email}</div>
+            </div>
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              <button onClick={() => sendReset(u)} disabled={resetLoading === u.uid} title="שלח איפוס סיסמה"
+                className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-[#209dd7] transition-colors disabled:opacity-50">
+                {resetLoading === u.uid ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+              </button>
+              {u.role !== "tenant_admin" && (
+                <button onClick={() => toggleActive(u)} title={u.isActive === false ? "הפעל משתמש" : "השבת משתמש"}
+                  className={cn("p-1.5 rounded-lg transition-colors", u.isActive === false
+                    ? "hover:bg-emerald-50 text-gray-400 hover:text-emerald-600"
+                    : "hover:bg-red-50 text-gray-400 hover:text-red-500")}>
+                  {u.isActive === false ? <UserCheck size={13} /> : <UserX size={13} />}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
-const TABS = [
+const BASE_TABS = [
   { id: "manufacturers",      label: "יצרנים",        icon: Car },
   { id: "vehicleTypes",       label: "סוגי רכב",      icon: Tag },
   { id: "fuelTypes",          label: "סוגי דלק",      icon: Fuel },
@@ -281,10 +469,15 @@ const TABS = [
   { id: "insuranceTypes",     label: "סוגי ביטוח",    icon: Shield },
 ] as const;
 
-type TabId = typeof TABS[number]["id"];
+const ADMIN_TAB = { id: "users", label: "משתמשים", icon: Users } as const;
+
+type TabId = typeof BASE_TABS[number]["id"] | "users";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("manufacturers");
+  const { profile } = useAuth();
+  const isTenantAdmin = profile?.role === "tenant_admin";
+  const TABS = isTenantAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
   const {
     manufacturers, vehicleTypes, fuelTypes, insuranceCompanies, insuranceTypes,
     addManufacturer, updateManufacturer, deleteManufacturer,
@@ -464,6 +657,13 @@ export default function SettingsPage() {
               placeholder="הוסף סוג ביטוח"
             />
           </>
+        )}
+
+        {activeTab === "users" && isTenantAdmin && profile?.tenantId && (
+          <UsersManager
+            tenantId={profile.tenantId}
+            tenantName={profile.tenantName ?? ""}
+          />
         )}
       </div>
     </div>

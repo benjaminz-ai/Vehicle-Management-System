@@ -95,6 +95,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
+
+            // Block disabled users
+            if (data.isActive === false) {
+              await signOut(auth);
+              setUser(null);
+              setProfile(null);
+              setLoading(false);
+              if (typeof window !== "undefined") {
+                window.location.href = "/login?disabled=1";
+              }
+              return;
+            }
+
             const tenantName: string | undefined = data.tenantName || undefined;
             setProfile({
               uid: firebaseUser.uid,

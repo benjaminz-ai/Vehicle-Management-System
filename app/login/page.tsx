@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Car, Clock } from "lucide-react";
+import { Car, Clock, UserX } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {
@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "1";
+  const accountDisabled = searchParams.get("disabled") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -58,6 +59,12 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
               <Clock size={14} className="text-amber-600 shrink-0" />
               <p className="text-xs text-amber-700 font-medium">פג תוקף החיבור (24 שעות) — יש להתחבר מחדש</p>
+            </div>
+          )}
+          {accountDisabled && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+              <UserX size={14} className="text-red-500 shrink-0" />
+              <p className="text-xs text-red-600 font-medium">החשבון הושבת — פנה למנהל המערכת</p>
             </div>
           )}
 
