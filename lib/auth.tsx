@@ -5,6 +5,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -47,15 +49,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
+  // Periodic check every hour — kicks out users whose session exceeded 24h
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      try {
+        const idTokenResult = await currentUser.getIdTokenResult(true); // force refresh
+        const authTime = new Date(idTokenResult.authTime).getTime();
+        const hoursSinceAuth = (Date.now() - authTime) / (1000 * 60 * 60);
+        if (hoursSinceAuth > 24) {
+          await signOut(auth);
+          if (typeof window !== "undefined") {
+            window.location.href = "/login?expired=1";
+          }
+        }
+      } catch { /* ignore */ }
+    }, 60 * 60 * 1000); // every 1 hour
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
         try {
+          // ── Check auth_time: enforce max 24h session ──────────────────────
+          const idTokenResult = await firebaseUser.getIdTokenResult();
+          const authTime = new Date(idTokenResult.authTime).getTime();
+          const hoursSinceAuth = (Date.now() - authTime) / (1000 * 60 * 60);
+
+          if (hoursSinceAuth > 24) {
+            // Session older than 24h → force re-login with expired message
+            await signOut(auth);
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            if (typeof window !== "undefined") {
+              window.location.href = "/login?expired=1";
+            }
+            return;
+          }
+
+          setUser(firebaseUser);
+
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
             const data = userDoc.data();
-            // tenantName is stored directly in the user doc to avoid needing read access to tenants/
             const tenantName: string | undefined = data.tenantName || undefined;
             setProfile({
               uid: firebaseUser.uid,

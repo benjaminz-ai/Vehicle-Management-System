@@ -19,7 +19,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const isResetPassword    = pathname === "/reset-password";
 
     if (!profile) {
-      if (!isLoginPage && !isSetupPage && !isForgotPassword && !isResetPassword) router.replace("/login");
+      if (!isLoginPage && !isSetupPage && !isForgotPassword && !isResetPassword) {
+        // If we had a user before (session expired), show expired message
+        router.replace("/login");
+      }
       return;
     }
 
