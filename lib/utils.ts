@@ -9,10 +9,22 @@ export function generateId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+// Formats "YYYY-MM-DD" or "YYYY-MM-DD HH:mm" → "DD/MM/YYYY" or "DD/MM/YYYY HH:mm"
 export function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const hasTime = dateStr.length > 10 && dateStr[10] === " ";
+  const [datePart, timePart] = hasTime ? dateStr.split(" ") : [dateStr, undefined];
+  const [y, m, d] = datePart.split("-");
+  return timePart ? `${d}/${m}/${y} ${timePart}` : `${d}/${m}/${y}`;
+}
+
+// Always shows date + time (for assignment logs)
+export function formatDateTime(dateStr: string): string {
+  if (!dateStr) return "-";
+  const hasTime = dateStr.length > 10 && dateStr[10] === " ";
+  const [datePart, timePart] = hasTime ? dateStr.split(" ") : [dateStr, undefined];
+  const [y, m, d] = datePart.split("-");
+  return timePart ? `${d}/${m}/${y} ${timePart}` : `${d}/${m}/${y} 00:00`;
 }
 
 export function formatCurrency(amount: number): string {

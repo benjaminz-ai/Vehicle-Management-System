@@ -39,7 +39,9 @@ const DEFAULT_VEHICLE_TYPES = ["רכב פרטי", "רכב מסחרי", "משאי
 const DEFAULT_FUEL_TYPES = ["בנזין", "דיזל", "חשמלי", "היברידי", "גז"];
 const DEFAULT_MANUFACTURERS = ["טויוטה", "יונדאי", "פורד", "קיה", "מאזדה", "ניסאן", "פולקסווגן", "מיצובישי"];
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Returns "YYYY-MM-DD HH:mm" in Israel local time (Asia/Jerusalem, handles DST)
+const nowIsrael = () =>
+  new Date().toLocaleString("sv-SE", { timeZone: "Asia/Jerusalem" }).slice(0, 16);
 
 // ── Context type ───────────────────────────────────────────────────────────────
 type StoreContextType = AppState & {
@@ -179,7 +181,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ── Vehicles ──────────────────────────────────────────────────────────────────
   const addVehicle = useCallback(async (v: Omit<Vehicle, "id">) => {
     const ref = await addDoc(col("vehicles"), v);
-    // Update assigned drivers
+    // Update assigned drivers + create assignment logs
     const driverIds = [v.mainDriverId, ...v.secondaryDriverIds].filter(Boolean);
     for (const dId of driverIds) {
       const d = state.drivers.find(x => x.id === dId);
@@ -188,12 +190,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           assignedVehicleIds: [...d.assignedVehicleIds, ref.id],
         });
       }
+      // Create assignment log entry (same as saveVehicleAssignment does)
+      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId: ref.id, startDate: nowIsrael() });
     }
   }, [col, docRef, state.drivers]);
 
   const updateVehicle = useCallback(async (id: string, v: Partial<Vehicle>) => {
+    const existing = state.vehicles.find(x => x.id === id);
     await updateDoc(docRef("vehicles", id), v as Record<string, unknown>);
-  }, [docRef]);
+
+    // If mainDriverId changed → close old log, open new one
+    if (existing && v.mainDriverId !== undefined && v.mainDriverId !== existing.mainDriverId) {
+      // Close old driver's open log for this vehicle
+      if (existing.mainDriverId) {
+        const oldLog = state.assignmentLogs.find(
+          l => l.driverId === existing.mainDriverId && l.vehicleId === id && !l.endDate
+        );
+        if (oldLog) await updateDoc(docRef("assignmentLogs", oldLog.id), { endDate: nowIsrael() });
+        const oldDriver = state.drivers.find(d => d.id === existing.mainDriverId);
+        if (oldDriver) await updateDoc(docRef("drivers", existing.mainDriverId), {
+          assignedVehicleIds: oldDriver.assignedVehicleIds.filter(x => x !== id),
+        });
+      }
+      // Open new driver's log
+      if (v.mainDriverId) {
+        await addDoc(col("assignmentLogs"), { driverId: v.mainDriverId, vehicleId: id, startDate: nowIsrael() });
+        const newDriver = state.drivers.find(d => d.id === v.mainDriverId);
+        if (newDriver) await updateDoc(docRef("drivers", v.mainDriverId), {
+          assignedVehicleIds: [...newDriver.assignedVehicleIds, id],
+        });
+      }
+    }
+  }, [col, docRef, state.vehicles, state.drivers, state.assignmentLogs]);
 
   const deleteVehicle = useCallback(async (id: string) => {
     await deleteDoc(docRef("vehicles", id));
@@ -254,7 +282,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Documents ─────────────────────────────────────────────────────────────────
   const addDocument = useCallback(async (d: Omit<DocumentRecord, "id" | "uploadedAt">) => {
-    await addDoc(col("documents"), { ...d, uploadedAt: today() });
+    await addDoc(col("documents"), { ...d, uploadedAt: nowIsrael() });
   }, [col]);
 
   const deleteDocument = useCallback(async (id: string) => {
@@ -277,7 +305,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         assignedVehicleIds: [...driver.assignedVehicleIds, vehicleId],
       });
     }
-    await addDoc(col("assignmentLogs"), { driverId, vehicleId, startDate: today() });
+    await addDoc(col("assignmentLogs"), { driverId, vehicleId, startDate: nowIsrael() });
   }, [col, docRef, state.vehicles, state.drivers]);
 
   const unassignDriverFromVehicle = useCallback(async (driverId: string, vehicleId: string) => {
@@ -287,7 +315,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       assignedVehicleIds: driver.assignedVehicleIds.filter(id => id !== vehicleId),
     });
     const log = state.assignmentLogs.find(l => l.driverId === driverId && l.vehicleId === vehicleId && !l.endDate);
-    if (log) await updateDoc(docRef("assignmentLogs", log.id), { endDate: today() });
+    if (log) await updateDoc(docRef("assignmentLogs", log.id), { endDate: nowIsrael() });
   }, [docRef, state.drivers, state.assignmentLogs]);
 
   const saveVehicleAssignment = useCallback(async (
@@ -315,7 +343,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
       }
       const log = state.assignmentLogs.find(l => l.driverId === dId && l.vehicleId === vehicleId && !l.endDate);
-      if (log) await updateDoc(docRef("assignmentLogs", log.id), { endDate: today() });
+      if (log) await updateDoc(docRef("assignmentLogs", log.id), { endDate: nowIsrael() });
     }
 
     for (const dId of added) {
@@ -325,7 +353,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           assignedVehicleIds: [...d.assignedVehicleIds, vehicleId],
         });
       }
-      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId, startDate: today() });
+      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId, startDate: nowIsrael() });
     }
   }, [col, docRef, state.vehicles, state.drivers, state.assignmentLogs]);
 

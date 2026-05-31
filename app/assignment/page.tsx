@@ -176,6 +176,7 @@ function AssignDrawer({
   });
   const [driverSearch, setDriverSearch] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; role: string } | null>(null);
+  const [confirmSave, setConfirmSave] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overZone, setOverZone] = useState<string | null>(null);
 
@@ -252,7 +253,24 @@ function AssignDrawer({
     setConfirmRemove(null);
   }
 
+  // Drivers removed compared to current vehicle state
+  const originalAll = [v.mainDriverId, ...v.secondaryDriverIds].filter(Boolean);
+  const stagedAllIds = [staged.mainDriverId, ...staged.secondaryDriverIds].filter(Boolean);
+  const removedDrivers = originalAll
+    .filter(id => !stagedAllIds.includes(id))
+    .map(id => drivers.find(d => d.id === id))
+    .filter(Boolean);
+
   function handleSave() {
+    // If any assigned drivers are being removed → show final confirmation
+    if (removedDrivers.length > 0) {
+      setConfirmSave(true);
+      return;
+    }
+    doSave();
+  }
+
+  function doSave() {
     saveVehicleAssignment(vehicleId, staged.mainDriverId, staged.secondaryDriverIds);
     onClose();
   }
@@ -425,6 +443,48 @@ function AssignDrawer({
           onConfirm={confirmRemoveDriver}
           onCancel={() => setConfirmRemove(null)}
         />
+      )}
+
+      {/* Final save confirmation — shown when drivers are being unassigned */}
+      {confirmSave && (
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50 rounded-none">
+          <div className="bg-white rounded-2xl shadow-2xl mx-4 p-5 w-full max-w-sm">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="font-bold text-[#032147] text-sm">אישור ניתוק שיבוץ</p>
+                <p className="text-xs text-gray-500 mt-0.5">הנהגים הבאים יוסרו מהרכב ושיבוצם יסתיים:</p>
+              </div>
+            </div>
+            <ul className="mb-4 space-y-1.5">
+              {removedDrivers.map(d => d && (
+                <li key={d.id} className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2 text-sm font-medium text-amber-800">
+                  <div className="w-6 h-6 rounded-md bg-amber-200 flex items-center justify-center text-[10px] font-bold shrink-0">
+                    {d.fullName.split(" ").map(p => p[0]).slice(0,2).join("")}
+                  </div>
+                  {d.fullName}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-gray-400 mb-4">זמן סיום השיבוץ יירשם לפי שעון ישראל.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmSave(false)}
+                className="flex-1 h-9 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => { setConfirmSave(false); doSave(); }}
+                className="flex-1 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+              >
+                אישור — נתק שיבוץ
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

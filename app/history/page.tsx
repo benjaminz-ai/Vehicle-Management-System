@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Search, Calendar, Car, Users, Clock, Download, FileText, Printer, ChevronDown, X } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function daysBetween(start: string, end: string) {
@@ -468,11 +468,11 @@ export default function HistoryPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(log.startDate)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">{formatDateTime(log.startDate)}</td>
                   <td className="px-4 py-3">
                     {isActive
                       ? <span className="text-xs text-emerald-600 font-semibold">פעיל עכשיו</span>
-                      : <span className="text-sm text-gray-600">{formatDate(log.endDate!)}</span>
+                      : <span className="text-sm text-gray-600 tabular-nums">{formatDateTime(log.endDate!)}</span>
                     }
                   </td>
                   <td className="px-4 py-3">
