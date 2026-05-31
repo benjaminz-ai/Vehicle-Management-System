@@ -48,16 +48,21 @@ export default function DashboardPage() {
     vehicles, drivers, serviceRecords, accidentCards,
     documents, vehicleStatuses, fuelTypes,
     vehicleInsurances, insuranceTypes, insuranceCompanies,
+    dismissedAlertKeys,
   } = useStore();
 
   const in30 = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Alerts: expiring license or insurance within 30 days (for vehicles with alerts enabled)
-  const expiringLicenses = vehicles.filter(v => v.alertsEnabled !== false && v.licenseExpiry && v.licenseExpiry <= in30);
+  // Alerts: expiring license or insurance within 30 days (for vehicles with alerts enabled, excluding dismissed)
+  const expiringLicenses = vehicles.filter(v =>
+    v.alertsEnabled !== false && v.licenseExpiry && v.licenseExpiry <= in30 &&
+    !dismissedAlertKeys.has(`license_${v.id}`)
+  );
   const expiringInsurances = vehicleInsurances.filter(ins => {
     const v = vehicles.find(x => x.id === ins.vehicleId);
-    return v?.alertsEnabled !== false && ins.endDate <= in30;
+    return v?.alertsEnabled !== false && ins.endDate <= in30 &&
+      !dismissedAlertKeys.has(`insurance_${ins.id}`);
   });
   const totalAlerts = expiringLicenses.length + expiringInsurances.length;
 

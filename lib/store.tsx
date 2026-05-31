@@ -93,6 +93,10 @@ type StoreContextType = AppState & {
   addVehicleInsurance: (ins: Omit<VehicleInsurance, "id">) => Promise<void>;
   updateVehicleInsurance: (id: string, ins: Partial<VehicleInsurance>) => Promise<void>;
   deleteVehicleInsurance: (id: string) => Promise<void>;
+  // Dismissed alerts
+  dismissAlert: (alertKey: string) => Promise<void>;
+  undismissAlert: (alertKey: string) => Promise<void>;
+  dismissedAlertKeys: Set<string>;
 };
 
 const StoreContext = createContext<StoreContextType | null>(null);
@@ -154,6 +158,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const [state, setState] = useState<AppState>(emptyState);
   const [storeLoading, setStoreLoading] = useState(true);
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   // Subscribe to all collections when tenantId is known
   useEffect(() => {
@@ -186,6 +191,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     sub("manufacturers", "manufacturers");
     sub("insuranceCompanies", "insuranceCompanies");
     sub("insuranceTypes", "insuranceTypes");
+
+    // Dismissed alerts subscription (separate — not in AppState)
+    const dismissUnsub = onSnapshot(collection(db, `tenants/${tenantId}/dismissedAlerts`), snap => {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 864e5).toISOString();
+      const keys = new Set(
+        snap.docs
+          .filter(d => (d.data().dismissedAt as string) > thirtyDaysAgo)
+          .map(d => d.data().alertKey as string)
+      );
+      setDismissedKeys(keys);
+    });
+    unsubs.push(dismissUnsub);
 
     setStoreLoading(false);
 
@@ -468,6 +486,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const updateVehicleInsurance = useCallback(async (id: string, ins: Partial<VehicleInsurance>) => { await updateDoc(docRef("vehicleInsurances", id), ins as Record<string, unknown>); }, [docRef]);
   const deleteVehicleInsurance = useCallback(async (id: string) => { await deleteDoc(docRef("vehicleInsurances", id)); }, [docRef]);
 
+  // ── Dismissed Alerts ──────────────────────────────────────────────────────────
+  const dismissAlert = useCallback(async (alertKey: string) => {
+    if (!tenantId) return;
+    // Use alertKey as doc ID for easy lookup & overwrite
+    const safeKey = alertKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+    await setDoc(doc(db, `tenants/${tenantId}/dismissedAlerts/${safeKey}`), {
+      alertKey,
+      dismissedAt: nowIsrael(),
+    });
+  }, [tenantId]);
+
+  const undismissAlert = useCallback(async (alertKey: string) => {
+    if (!tenantId) return;
+    const safeKey = alertKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+    await deleteDoc(doc(db, `tenants/${tenantId}/dismissedAlerts/${safeKey}`));
+  }, [tenantId]);
+
   const value: StoreContextType = {
     ...state,
     storeLoading,
@@ -513,6 +548,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addVehicleInsurance,
     updateVehicleInsurance,
     deleteVehicleInsurance,
+    dismissAlert,
+    undismissAlert,
+    dismissedAlertKeys: dismissedKeys,
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
