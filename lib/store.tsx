@@ -50,7 +50,7 @@ const nowIsrael = () =>
 // ── Context type ───────────────────────────────────────────────────────────────
 type StoreContextType = AppState & {
   storeLoading: boolean;
-  addVehicle: (v: Omit<Vehicle, "id">) => Promise<void>;
+  addVehicle: (v: Omit<Vehicle, "id">) => Promise<string>;
   updateVehicle: (id: string, v: Partial<Vehicle>) => Promise<void>;
   deleteVehicle: (id: string) => Promise<void>;
   moveVehicleStatus: (vehicleId: string, statusId: string) => Promise<void>;
@@ -203,7 +203,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [tenantId]);
 
   // ── Vehicles ──────────────────────────────────────────────────────────────────
-  const addVehicle = useCallback(async (v: Omit<Vehicle, "id">) => {
+  const addVehicle = useCallback(async (v: Omit<Vehicle, "id">): Promise<string> => {
     const ref = await addDoc(col("vehicles"), v);
     // Update assigned drivers + create assignment logs
     const driverIds = [v.mainDriverId, ...v.secondaryDriverIds].filter(Boolean);
@@ -217,6 +217,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // Create assignment log entry (same as saveVehicleAssignment does)
       await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId: ref.id, startDate: nowIsrael() });
     }
+    return ref.id;
   }, [col, docRef, state.drivers]);
 
   const updateVehicle = useCallback(async (id: string, v: Partial<Vehicle>) => {

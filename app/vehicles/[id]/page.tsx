@@ -392,7 +392,12 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
       <Dialog open={showEdit} onClose={() => setShowEdit(false)} title="Edit Vehicle" size="lg">
         <VehicleForm
           initial={vehicle}
-          onSave={data => { updateVehicle(id, data); setShowEdit(false); }}
+          onSave={(data, insurances) => {
+            updateVehicle(id, data);
+            // Add any new insurances added during edit
+            insurances.forEach(ins => addVehicleInsurance({ ...ins, vehicleId: id }));
+            setShowEdit(false);
+          }}
           onCancel={() => setShowEdit(false)}
         />
       </Dialog>

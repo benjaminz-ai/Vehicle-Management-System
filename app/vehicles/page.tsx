@@ -4,13 +4,13 @@ import { useStore } from "@/lib/store";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
-import { VehicleForm } from "@/components/VehicleForm";
+import { VehicleForm, type PendingInsurance } from "@/components/VehicleForm";
 import { Plus, Trash2, Eye, Search } from "lucide-react";
 import Link from "next/link";
 import type { Vehicle } from "@/types";
 
 export default function VehiclesPage() {
-  const { vehicles, drivers, vehicleStatuses, vehicleTypes, fuelTypes, addVehicle, deleteVehicle } = useStore();
+  const { vehicles, drivers, vehicleStatuses, vehicleTypes, fuelTypes, addVehicle, deleteVehicle, addVehicleInsurance } = useStore();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
@@ -148,8 +148,11 @@ export default function VehiclesPage() {
 
       <Dialog open={showAdd} onClose={() => setShowAdd(false)} title="הוספת רכב" size="lg">
         <VehicleForm
-          onSave={data => {
-            addVehicle({ ...data, serviceRecordIds: [], accidentIds: [], documentIds: [], secondaryDriverIds: [] });
+          onSave={async (data, insurances) => {
+            const vehicleId = await addVehicle({ ...data, serviceRecordIds: [], accidentIds: [], documentIds: [], secondaryDriverIds: [] });
+            for (const ins of insurances) {
+              await addVehicleInsurance({ ...ins, vehicleId });
+            }
             setShowAdd(false);
           }}
           onCancel={() => setShowAdd(false)}

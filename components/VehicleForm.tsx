@@ -3,8 +3,16 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Input, Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Plus, Check, X, Bell } from "lucide-react";
+import { Plus, Check, X, Bell, Shield, Trash2 } from "lucide-react";
 import type { Vehicle } from "@/types";
+
+// Insurance entry collected before vehicle ID exists
+export type PendingInsurance = {
+  insuranceTypeId: string;
+  insuranceCompanyId: string;
+  startDate: string;
+  endDate: string;
+};
 
 type VehicleFormData = Omit<Vehicle, "id" | "serviceRecordIds" | "accidentIds" | "documentIds" | "secondaryDriverIds">;
 
@@ -30,12 +38,17 @@ export function VehicleForm({
   onCancel,
 }: {
   initial?: Partial<Vehicle>;
-  onSave: (data: VehicleFormData) => void;
+  onSave: (data: VehicleFormData, insurances: PendingInsurance[]) => void;
   onCancel: () => void;
 }) {
-  const { vehicleTypes, fuelTypes, vehicleStatuses, drivers, manufacturers, addModelToManufacturer } = useStore();
+  const { vehicleTypes, fuelTypes, vehicleStatuses, drivers, manufacturers, addModelToManufacturer, insuranceTypes, insuranceCompanies } = useStore();
   const [addingModel, setAddingModel] = useState(false);
   const [newModelName, setNewModelName] = useState("");
+
+  // Insurance state
+  const [pendingInsurances, setPendingInsurances] = useState<PendingInsurance[]>([]);
+  const [showInsuranceForm, setShowInsuranceForm] = useState(false);
+  const [insForm, setInsForm] = useState<PendingInsurance>({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" });
   const defaultStatus = vehicleStatuses.find(s => s.isDefault);
 
   const [form, setForm] = useState<VehicleFormData>({
@@ -71,7 +84,7 @@ export function VehicleForm({
     if (!validate()) return;
     const data = { ...form, secondaryDriverIds: [] };
     if (data.ownershipType === "company_owned") data.leasingCompanyName = "";
-    onSave(data);
+    onSave(data, pendingInsurances);
   }
 
   return (
@@ -263,6 +276,112 @@ export function VehicleForm({
           onChange={e => set("mileage", Number(e.target.value))}
         />
       </div>
+      {/* Insurance section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className="text-[#209dd7]" />
+            <span className="text-sm font-medium text-gray-700">ביטוחים</span>
+            {pendingInsurances.length > 0 && (
+              <span className="text-[10px] bg-[#209dd7]/10 text-[#209dd7] font-bold px-1.5 py-0.5 rounded-full">{pendingInsurances.length}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInsuranceForm(v => !v)}
+            className="flex items-center gap-1 text-xs text-[#209dd7] hover:text-[#1a7fb0] font-medium transition-colors"
+          >
+            <Plus size={12} /> הוסף ביטוח
+          </button>
+        </div>
+
+        {/* Pending insurances list */}
+        {pendingInsurances.map((ins, i) => {
+          const insType = insuranceTypes.find(t => t.id === ins.insuranceTypeId);
+          const insCompany = insuranceCompanies.find(c => c.id === ins.insuranceCompanyId);
+          return (
+            <div key={i} className="flex items-center gap-2 bg-[#f8fafc] border border-gray-100 rounded-xl px-3 py-2">
+              <Shield size={12} className="text-[#209dd7] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-medium text-[#032147]">{insType?.name ?? "—"}</span>
+                {insCompany && <span className="text-xs text-gray-400 mr-1"> · {insCompany.name}</span>}
+                <span className="text-xs text-gray-400 mr-1"> · {ins.startDate} – {ins.endDate}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingInsurances(list => list.filter((_, j) => j !== i))}
+                className="p-1 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          );
+        })}
+
+        {/* Inline insurance form */}
+        {showInsuranceForm && (
+          <div className="border border-[#209dd7]/30 bg-[#209dd7]/5 rounded-xl p-3 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-gray-500">סוג ביטוח</label>
+                <select
+                  className="h-8 px-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 bg-white"
+                  value={insForm.insuranceTypeId}
+                  onChange={e => setInsForm(f => ({ ...f, insuranceTypeId: e.target.value }))}
+                >
+                  <option value="">בחר סוג...</option>
+                  {insuranceTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-gray-500">חברת ביטוח</label>
+                <select
+                  className="h-8 px-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 bg-white"
+                  value={insForm.insuranceCompanyId}
+                  onChange={e => setInsForm(f => ({ ...f, insuranceCompanyId: e.target.value }))}
+                >
+                  <option value="">בחר חברה...</option>
+                  {insuranceCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-gray-500">תאריך התחלה</label>
+                <input type="date" className="h-8 px-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 bg-white"
+                  value={insForm.startDate} onChange={e => setInsForm(f => ({ ...f, startDate: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-gray-500">תאריך פקיעה</label>
+                <input type="date" className="h-8 px-2 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 bg-white"
+                  value={insForm.endDate} onChange={e => setInsForm(f => ({ ...f, endDate: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={!insForm.insuranceTypeId || !insForm.startDate || !insForm.endDate}
+                onClick={() => {
+                  setPendingInsurances(list => [...list, { ...insForm }]);
+                  setInsForm({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" });
+                  setShowInsuranceForm(false);
+                }}
+                className="h-7 px-3 rounded-lg bg-[#209dd7] text-white text-xs font-medium disabled:opacity-40 hover:bg-[#1a7fb0] transition-colors"
+              >
+                הוסף
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowInsuranceForm(false); setInsForm({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" }); }}
+                className="h-7 px-3 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* License expiry + alerts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
