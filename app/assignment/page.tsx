@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   DndContext,
   DragOverlay,
+  pointerWithin,
   useDraggable,
   useDroppable,
   PointerSensor,
@@ -29,6 +30,44 @@ type StagedAssignment = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Draggable driver row (used in both the drawer list and the DragOverlay)
 // ─────────────────────────────────────────────────────────────────────────────
+function DriverRowView({
+  name,
+  license,
+  dimmed,
+}: {
+  name: string;
+  license: string;
+  dimmed?: boolean;
+}) {
+  const parts    = name.trim().split(" ");
+  const initials = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2);
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl border bg-white transition-colors",
+        dimmed
+          ? "opacity-40 border-dashed border-gray-200"
+          : "border-gray-100 shadow-sm hover:border-[#209dd7]/40 hover:shadow-md cursor-grab active:cursor-grabbing"
+      )}
+    >
+      <div className="text-gray-300 shrink-0">
+        <GripVertical size={14} />
+      </div>
+      <div className="w-7 h-7 rounded-lg bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-[10px] shrink-0">
+        {initials}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold text-[#032147] truncate">{name}</div>
+        <div className="text-[10px] text-gray-400 font-mono">{license}</div>
+      </div>
+    </div>
+  );
+}
+
+// Draggable wrapper. The source stays in place (dimmed) while the DragOverlay
+// renders the floating copy that follows the pointer. The whole row is the drag
+// handle, and no transform is applied to the source — this avoids the clipped,
+// janky double-move that broke dragging inside the scroll container.
 function DraggableDriverRow({
   driverId,
   name,
@@ -40,39 +79,10 @@ function DraggableDriverRow({
   license: string;
   isDragging?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `drag-${driverId}` });
-  const parts    = name.trim().split(" ");
-  const initials = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2);
-
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 50 }
-    : undefined;
-
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: `drag-${driverId}` });
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl border bg-white transition-all",
-        isDragging
-          ? "opacity-40 border-dashed border-gray-200"
-          : "border-gray-100 shadow-sm hover:border-[#209dd7]/40 hover:shadow-md cursor-grab active:cursor-grabbing"
-      )}
-    >
-      <div
-        {...listeners}
-        {...attributes}
-        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
-      >
-        <GripVertical size={14} />
-      </div>
-      <div className="w-7 h-7 rounded-lg bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-[10px] shrink-0">
-        {initials}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-[#032147] truncate">{name}</div>
-        <div className="text-[10px] text-gray-400 font-mono">{license}</div>
-      </div>
+    <div ref={setNodeRef} {...listeners} {...attributes} className="touch-none outline-none">
+      <DriverRowView name={name} license={license} dimmed={isDragging} />
     </div>
   );
 }
@@ -313,6 +323,7 @@ function AssignDrawer({
 
         <DndContext
           sensors={sensors}
+          collisionDetection={pointerWithin}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver as never}
           onDragEnd={handleDragEnd}
@@ -408,8 +419,7 @@ function AssignDrawer({
 
           <DragOverlay>
             {dragDriver && (
-              <DraggableDriverRow
-                driverId={dragDriver.id}
+              <DriverRowView
                 name={dragDriver.fullName}
                 license={dragDriver.driverLicenseNumber}
               />
