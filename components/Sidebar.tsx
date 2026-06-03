@@ -21,7 +21,7 @@ const navGroups = [
   {
     label: "ראשי",
     items: [
-      { href: "/", label: "דשבורד", icon: LayoutDashboard },
+      { href: "/dashboard", label: "דשבורד", icon: LayoutDashboard },
       { href: "/board", label: "לוח רכבים", icon: Kanban },
     ],
   },

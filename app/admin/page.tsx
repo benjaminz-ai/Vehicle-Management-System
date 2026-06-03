@@ -76,7 +76,7 @@ export default function AdminPage() {
 
   // Guard: only super_admin
   useEffect(() => {
-    if (profile && profile.role !== "super_admin") router.replace("/");
+    if (profile && profile.role !== "super_admin") router.replace("/dashboard");
   }, [profile, router]);
 
   // Subscribe to tenants collection
@@ -444,7 +444,7 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             enterSupportMode(t.id, t.name);
-                            router.push("/");
+                            router.push("/dashboard");
                           }}
                           className="text-xs font-bold px-3 py-1.5 rounded-lg text-[#753991] hover:bg-[#753991]/10 transition-colors flex items-center gap-1"
                           title="כנס למערכת כאילו אתה הלקוח הזה"

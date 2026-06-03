@@ -19,7 +19,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && profile) {
       if (profile.role === "super_admin") router.replace("/admin");
-      else router.replace("/");
+      else router.replace("/dashboard");
     }
   }, [profile, loading, router]);
 

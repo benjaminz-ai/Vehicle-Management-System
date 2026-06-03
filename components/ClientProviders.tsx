@@ -17,9 +17,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const isSetupPage        = pathname === "/setup";
     const isForgotPassword   = pathname === "/forgot-password";
     const isResetPassword    = pathname === "/reset-password";
+    const isLanding          = pathname === "/";
 
     if (!profile) {
-      if (!isLoginPage && !isSetupPage && !isForgotPassword && !isResetPassword) {
+      // Public pages that do not require authentication
+      if (!isLoginPage && !isSetupPage && !isForgotPassword && !isResetPassword && !isLanding) {
         // If we had a user before (session expired), show expired message
         router.replace("/login");
       }
@@ -34,9 +36,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Tenant user on login page → send to dashboard
-    if (isLoginPage || isAdminPage) {
-      router.replace("/");
+    // Logged-in tenant user should not see the public landing / login
+    if (isLoginPage || isAdminPage || isLanding) {
+      router.replace("/dashboard");
     }
   }, [profile, loading, pathname, router, supportTenant]);
 

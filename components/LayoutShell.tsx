@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { ShieldAlert, LogOut } from "lucide-react";
 
 // Pages that render without the sidebar/header shell
-const BARE_PATHS = ["/login", "/admin", "/setup", "/forgot-password", "/reset-password"];
+const BARE_PATHS = ["/", "/login", "/admin", "/setup", "/forgot-password", "/reset-password"];
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
