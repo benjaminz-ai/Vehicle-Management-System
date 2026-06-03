@@ -142,32 +142,50 @@ export default function AdminPage() {
     setEditBusy(true);
     setError("");
     try {
-      const { setDoc } = await import("firebase/firestore");
-      // Update tenant name + adminEmail
-      await updateDoc(doc(db, "tenants", t.id), {
-        name: editForm.tenantName,
-        adminEmail: editForm.adminEmail,
-      });
+      const { setDoc, getDocs, query, where } = await import("firebase/firestore");
+      const newEmail = editForm.adminEmail.trim();
+      const emailChanged = !!newEmail && newEmail !== (t.adminEmail ?? "");
 
-      // Always keep the linked user doc in sync (email + tenantName always,
-      // name only when provided). Previously this ran only if a name was typed,
-      // so changing just the email left the users doc with the old email.
-      const { getDocs, query, where } = await import("firebase/firestore");
+      // Linked user docs for this tenant (doc id === Firebase Auth uid)
       const q = query(collection(db, "users"), where("tenantId", "==", t.id));
       const snap = await getDocs(q);
 
+      // If the admin email changed, update the REAL Firebase Auth login first —
+      // so the old email actually stops working, not just the Firestore label.
+      // Only tenant_admin accounts of THIS tenant are touched; super_admin never.
+      if (emailChanged) {
+        const adminDocs = snap.docs.filter(d => (d.data().role ?? "") === "tenant_admin");
+        for (const d of adminDocs) {
+          const res = await fetch("/api/update-user-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid: d.id, newEmail }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || "עדכון מייל ההתחברות נכשל");
+          }
+        }
+      }
+
+      // Update tenant doc
+      await updateDoc(doc(db, "tenants", t.id), {
+        name: editForm.tenantName,
+        adminEmail: newEmail,
+      });
+
+      // Keep the Firestore label fields in sync (never touch a super_admin doc)
       const updates: Record<string, string> = {};
-      if (editForm.adminEmail) updates.email = editForm.adminEmail;
+      if (newEmail) updates.email = newEmail;
       if (editForm.tenantName) updates.tenantName = editForm.tenantName;
       if (editForm.adminFirstName) updates.firstName = editForm.adminFirstName;
       if (editForm.adminLastName) updates.lastName = editForm.adminLastName;
 
       if (Object.keys(updates).length > 0) {
-        // await all writes so the success message reflects completed updates
         await Promise.all(
-          snap.docs.map(userDoc =>
-            setDoc(doc(db, "users", userDoc.id), updates, { merge: true })
-          )
+          snap.docs
+            .filter(userDoc => (userDoc.data().role ?? "") !== "super_admin")
+            .map(userDoc => setDoc(doc(db, "users", userDoc.id), updates, { merge: true }))
         );
       }
       setSuccess(`הלקוח "${editForm.tenantName}" עודכן בהצלחה`);
