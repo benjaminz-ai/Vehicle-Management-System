@@ -1,6 +1,3 @@
-"use client";
-import { useState } from "react";
-import { useAuth } from "@/lib/auth";
 import {
   Car, Users, Wrench, AlertTriangle, FileText, Bell, Shield, Kanban,
   Network, LayoutDashboard, Check, X, Cloud, Smartphone, Lock,
@@ -11,64 +8,23 @@ const NAVY = "#032147";
 const GOLD = "#ecad0a";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Embedded login panel (reuses the real auth flow)
+// Login call-to-action — sends users to the existing /login page
 // ─────────────────────────────────────────────────────────────────────────────
-function LoginPanel() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await login(email.trim(), password);
-      // On success, the global AuthGuard redirects to /dashboard automatically.
-    } catch {
-      setError("אימייל או סיסמה שגויים");
-      setBusy(false);
-    }
-  };
-
+function LoginCta() {
   return (
-    <div className="bg-white rounded-2xl shadow-xl shadow-[#032147]/10 border border-gray-100 p-7 w-full max-w-sm">
+    <div className="bg-white rounded-2xl shadow-xl shadow-[#032147]/10 border border-gray-100 p-8 w-full max-w-sm text-center">
+      <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center mb-4" style={{ background: NAVY }}>
+        <Lock size={20} style={{ color: GOLD }} />
+      </div>
       <h2 className="text-lg font-bold text-[#032147]">כניסת לקוחות</h2>
-      <p className="text-sm text-gray-400 mt-0.5 mb-5">התחברו עם פרטי הארגון שלכם</p>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">אימייל</label>
-          <input
-            type="email" required
-            className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-[#f8fafc] text-sm text-[#032147] focus:outline-none focus:ring-2 focus:ring-[#209dd7]/25 focus:border-[#209dd7] transition-all"
-            placeholder="name@example.com"
-            value={email} onChange={e => setEmail(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">סיסמה</label>
-          <input
-            type="password" required
-            className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-[#f8fafc] text-sm text-[#032147] focus:outline-none focus:ring-2 focus:ring-[#209dd7]/25 focus:border-[#209dd7] transition-all"
-            placeholder="••••••••"
-            value={password} onChange={e => setPassword(e.target.value)}
-          />
-        </div>
-        {error && (
-          <div className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2 text-center">{error}</div>
-        )}
-        <button
-          type="submit" disabled={busy}
-          className="h-10 rounded-xl bg-[#032147] text-white text-sm font-semibold hover:bg-[#032147]/90 disabled:opacity-50 transition-all mt-1"
-        >
-          {busy ? "מתחבר..." : "כניסה למערכת"}
-        </button>
-        <div className="text-center">
-          <a href="/forgot-password" className="text-xs text-[#209dd7] hover:text-[#1880b0] transition-colors">שכחתי סיסמה</a>
-        </div>
-      </form>
+      <p className="text-sm text-gray-400 mt-1 mb-5">לקוחות רשומים — התחברו עם פרטי הארגון שלכם.</p>
+      <a
+        href="/login"
+        className="block h-11 leading-[44px] rounded-xl bg-[#032147] text-white text-sm font-semibold hover:bg-[#032147]/90 transition-all"
+      >
+        כניסה למערכת
+      </a>
+      <a href="/forgot-password" className="inline-block mt-3 text-xs text-[#209dd7] hover:text-[#1880b0] transition-colors">שכחתי סיסמה</a>
     </div>
   );
 }
@@ -210,7 +166,7 @@ export default function LandingPage() {
               <div className="text-[#ecad0a] text-[9px] font-semibold tracking-widest uppercase">Fleet Manager</div>
             </div>
           </div>
-          <a href="#login" className="text-sm font-semibold text-[#032147] hover:text-[#209dd7] transition-colors flex items-center gap-1">
+          <a href="/login" className="text-sm font-semibold text-[#032147] hover:text-[#209dd7] transition-colors flex items-center gap-1">
             כניסת לקוחות <ArrowLeft size={14} />
           </a>
         </div>
@@ -238,7 +194,7 @@ export default function LandingPage() {
           </div>
           {/* Login (left in RTL) */}
           <div id="login" className="flex lg:justify-start justify-center">
-            <LoginPanel />
+            <LoginCta />
           </div>
         </div>
       </section>
@@ -309,7 +265,7 @@ export default function LandingPage() {
           <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: GOLD }} />
           <h2 className="text-2xl font-bold text-white">מוכנים לקחת שליטה על הצי?</h2>
           <p className="text-white/60 text-sm mt-2 mb-6">לקוחות רשומים — התחברו וגשו לכל הנתונים שלכם.</p>
-          <a href="#login" className="inline-flex items-center gap-2 bg-white text-[#032147] text-sm font-bold rounded-xl px-6 py-3 hover:bg-gray-100 transition-colors">
+          <a href="/login" className="inline-flex items-center gap-2 bg-white text-[#032147] text-sm font-bold rounded-xl px-6 py-3 hover:bg-gray-100 transition-colors">
             כניסה למערכת <ArrowLeft size={15} />
           </a>
         </div>
