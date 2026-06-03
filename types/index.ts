@@ -72,6 +72,7 @@ export type Driver = {
   lastName: string;
   fullName: string;
   uniqueId: string;
+  email?: string;          // כתובת מייל לדיוור
   dateOfBirth: string;
   driverLicenseNumber: string;
   assignedVehicleIds: string[];

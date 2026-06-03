@@ -18,6 +18,7 @@ function DriverForm({ initial, onSave, onCancel }: {
     firstName: initial?.firstName ?? "",
     lastName: initial?.lastName ?? "",
     uniqueId: initial?.uniqueId ?? "",
+    email: initial?.email ?? "",
     dateOfBirth: initial?.dateOfBirth ?? "",
     driverLicenseNumber: initial?.driverLicenseNumber ?? "",
   });
@@ -35,6 +36,7 @@ function DriverForm({ initial, onSave, onCancel }: {
     if (!form.lastName.trim()) err.lastName = "שדה חובה";
     if (!form.uniqueId.trim()) err.uniqueId = "שדה חובה";
     if (!form.driverLicenseNumber.trim()) err.driverLicenseNumber = "שדה חובה";
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) err.email = "כתובת מייל לא תקינה";
     setErrors(err);
     if (Object.keys(err).length > 0) return;
     onSave(form);
@@ -47,6 +49,7 @@ function DriverForm({ initial, onSave, onCancel }: {
         <Input label="שם משפחה" value={form.lastName} onChange={e => set("lastName", e.target.value)} error={errors.lastName} placeholder="שם משפחה" />
       </div>
       <Input label="מספר תעודת זהות" value={form.uniqueId} onChange={e => set("uniqueId", e.target.value)} error={errors.uniqueId} placeholder="000000000" />
+      <Input label="כתובת מייל" type="email" value={form.email} onChange={e => set("email", e.target.value)} error={errors.email} placeholder="driver@example.com" />
       <Input label="תאריך לידה" type="date" value={form.dateOfBirth} onChange={e => set("dateOfBirth", e.target.value)} />
       <Input label="מספר רישיון נהיגה" value={form.driverLicenseNumber} onChange={e => set("driverLicenseNumber", e.target.value)} error={errors.driverLicenseNumber} placeholder="0000000" />
       <div className="flex justify-end gap-2 pt-2">

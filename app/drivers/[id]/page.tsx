@@ -20,6 +20,7 @@ function DriverEditForm({ driver, onSave, onCancel }: { driver: Driver; onSave: 
     firstName: driver.firstName,
     lastName: driver.lastName,
     uniqueId: driver.uniqueId,
+    email: driver.email ?? "",
     dateOfBirth: driver.dateOfBirth,
     driverLicenseNumber: driver.driverLicenseNumber,
   });
@@ -35,6 +36,7 @@ function DriverEditForm({ driver, onSave, onCancel }: { driver: Driver; onSave: 
         <Input label="Last Name" value={form.lastName} onChange={e => set("lastName", e.target.value)} />
       </div>
       <Input label="Unique ID Number" value={form.uniqueId} onChange={e => set("uniqueId", e.target.value)} />
+      <Input label="כתובת מייל" type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="driver@example.com" />
       <Input label="Date of Birth" type="date" value={form.dateOfBirth} onChange={e => set("dateOfBirth", e.target.value)} />
       <Input label="Driver License Number" value={form.driverLicenseNumber} onChange={e => set("driverLicenseNumber", e.target.value)} />
       <div className="flex justify-end gap-2 pt-2">
@@ -106,6 +108,7 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
             {[
               { label: "Full Name", value: driver.fullName },
               { label: "ID Number", value: driver.uniqueId },
+              { label: "כתובת מייל", value: driver.email || "—" },
               { label: "Date of Birth", value: formatDate(driver.dateOfBirth) },
               { label: "License Number", value: driver.driverLicenseNumber },
               { label: "Assigned Vehicles", value: String(assignedVehicles.length) },
