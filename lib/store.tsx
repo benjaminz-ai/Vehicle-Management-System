@@ -354,13 +354,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const unassignDriverFromVehicle = useCallback(async (driverId: string, vehicleId: string) => {
     const driver = state.drivers.find(d => d.id === driverId);
-    if (!driver) return;
-    await updateDoc(docRef("drivers", driverId), {
-      assignedVehicleIds: driver.assignedVehicleIds.filter(id => id !== vehicleId),
-    });
+    if (driver) {
+      await updateDoc(docRef("drivers", driverId), {
+        assignedVehicleIds: driver.assignedVehicleIds.filter(id => id !== vehicleId),
+      });
+    }
+    // Detach the driver from the vehicle record too, so the board, assignment
+    // drawer and vehicle page reflect the ended assignment (not just the log).
+    const vehicle = state.vehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+      const updates: Record<string, unknown> = {};
+      if (vehicle.mainDriverId === driverId) updates.mainDriverId = "";
+      if (vehicle.secondaryDriverIds.includes(driverId)) {
+        updates.secondaryDriverIds = vehicle.secondaryDriverIds.filter(id => id !== driverId);
+      }
+      if (Object.keys(updates).length > 0) await updateDoc(docRef("vehicles", vehicleId), updates);
+    }
     const log = state.assignmentLogs.find(l => l.driverId === driverId && l.vehicleId === vehicleId && !l.endDate);
     if (log) await updateDoc(docRef("assignmentLogs", log.id), { endDate: nowIsrael() });
-  }, [docRef, state.drivers, state.assignmentLogs]);
+  }, [docRef, state.drivers, state.vehicles, state.assignmentLogs]);
 
   const saveVehicleAssignment = useCallback(async (
     vehicleId: string,
