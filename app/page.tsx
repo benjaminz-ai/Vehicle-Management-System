@@ -7,6 +7,56 @@ import {
 const NAVY = "#032147";
 const GOLD = "#ecad0a";
 
+// Mini dashboard mockup (dummy data)
+function MiniDashboard() {
+  const kpis = [
+    { icon: Car, value: "30", label: 'סה"כ רכבים', accent: "bg-sky-50 text-sky-600" },
+    { icon: Users, value: "19", label: 'סה"כ נהגים', accent: "bg-indigo-50 text-indigo-600" },
+    { icon: AlertTriangle, value: "0", label: "תאונות פתוחות", accent: "bg-red-50 text-red-600" },
+    { icon: FileText, value: "30", label: "מסמכים", accent: "bg-gray-100 text-gray-500" },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl p-5" style={{ background: NAVY }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-sm font-bold text-white">בריאות הצי</div>
+            <div className="text-xs text-white/50 mt-0.5">מתוך 30 רכבים זמינים תפעולית 26</div>
+          </div>
+          <div className="text-left">
+            <div className="text-2xl font-extrabold" style={{ color: GOLD }}>87%</div>
+            <div className="text-[10px] text-white/50">זמינות</div>
+          </div>
+        </div>
+        <div className="flex h-2 rounded-full overflow-hidden mt-4 gap-0.5">
+          <div className="bg-emerald-500" style={{ width: "37%" }} />
+          <div className="bg-[#209dd7]" style={{ width: "50%" }} />
+          <div className="bg-red-500" style={{ width: "13%" }} />
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[11px] text-white/70">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> 11 זמין</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#209dd7]" /> 15 בשימוש</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> 0 בטיפול</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> 4 מושבת</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {kpis.map(k => (
+          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+            <div className={"w-9 h-9 rounded-xl flex items-center justify-center shrink-0 " + k.accent}>
+              <k.icon size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xl font-bold text-[#032147] leading-none">{k.value}</div>
+              <div className="text-[11px] text-gray-500 mt-1 truncate">{k.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Login call-to-action — sends users to the existing /login page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +74,6 @@ function LoginCta() {
       >
         כניסה למערכת
       </a>
-      <a href="/forgot-password" className="inline-block mt-3 text-xs text-[#209dd7] hover:text-[#1880b0] transition-colors">שכחתי סיסמה</a>
     </div>
   );
 }
@@ -251,9 +300,9 @@ export default function LandingPage() {
         <div className="text-center mb-10">
           <span className="text-xs font-bold tracking-widest uppercase text-[#209dd7]">מסכי תצוגה</span>
           <h2 className="text-2xl lg:text-3xl font-bold text-[#032147] mt-2">ככה זה נראה בפועל</h2>
-          <p className="text-gray-500 text-sm mt-3">תצוגה לדוגמה עם נתוני דמה — הנתונים האמיתיים נטענים רק לאחר התחברות.</p>
         </div>
-        <div className="grid lg:grid-cols-2 gap-6">
+        <MiniDashboard />
+        <div className="grid lg:grid-cols-2 gap-6 mt-6">
           <MiniBoard />
           <MiniAlerts />
         </div>
