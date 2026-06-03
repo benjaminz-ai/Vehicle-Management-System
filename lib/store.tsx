@@ -563,11 +563,3 @@ export function useStore() {
   if (!ctx) throw new Error("useStore must be used within StoreProvider");
   return ctx;
 }
-r>
-}
-
-export function useStore() {
-  const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error("useStore must be used within StoreProvider");
-  return ctx;
-}
