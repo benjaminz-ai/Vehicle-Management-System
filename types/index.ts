@@ -40,6 +40,7 @@ export type Vehicle = {
   mileage: number;
   licenseExpiry?: string;   // תאריך מבחן רישוי
   alertsEnabled?: boolean;  // התראות לביטוח/רישוי
+  notes?: string;           // הערות / טקסט חופשי (קוד כניסה, מידע נוסף)
   serviceRecordIds: string[];
   accidentIds: string[];
   documentIds: string[];

@@ -23,7 +23,7 @@ import { useStore } from "@/lib/store";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/Dialog";
-import { GripVertical, Car, AlertTriangle, Wrench, Users } from "lucide-react";
+import { GripVertical, Car, AlertTriangle, Wrench, Users, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Vehicle, VehicleStatus } from "@/types";
 import Link from "next/link";
@@ -61,13 +61,19 @@ function VehicleCard({ vehicle, isDragging }: { vehicle: Vehicle; isDragging?: b
         {openAccidents > 0 && (
           <span className="inline-flex items-center gap-1 text-[11px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded">
             <AlertTriangle size={10} />
-            {openAccidents} accident{openAccidents > 1 ? "s" : ""}
+            {openAccidents} {openAccidents > 1 ? "תאונות" : "תאונה"}
           </span>
         )}
       </div>
+      {vehicle.notes?.trim() && (
+        <div className="flex items-start gap-1 mt-2 text-[11px] text-amber-700 bg-amber-50 px-1.5 py-1 rounded" title={vehicle.notes}>
+          <StickyNote size={11} className="shrink-0 mt-0.5" />
+          <span className="line-clamp-2 break-words">{vehicle.notes}</span>
+        </div>
+      )}
       <div className="mt-2">
         <Link href={`/vehicles/${vehicle.id}`} className="text-[11px] text-[#209dd7] hover:underline" onClick={e => e.stopPropagation()}>
-          View details
+          צפה בפרטים
         </Link>
       </div>
     </div>
@@ -217,8 +223,8 @@ export default function BoardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#032147]">Vehicle Board</h1>
-        <p className="text-sm text-[#888888] mt-0.5">Drag vehicles between status columns. Drag column headers to reorder.</p>
+        <h1 className="text-2xl font-bold text-[#032147]">לוח רכבים</h1>
+        <p className="text-sm text-[#888888] mt-0.5">גררו רכבים בין עמודות הסטטוס. גררו את כותרות העמודות כדי לסדר מחדש.</p>
       </div>
 
       <DndContext
@@ -251,9 +257,9 @@ export default function BoardPage() {
         onConfirm={() => {
           if (confirmMove) moveVehicleStatus(confirmMove.vehicleId, confirmMove.statusId);
         }}
-        title={`Move to "${confirmMove?.statusName}"?`}
-        description={`This will change the vehicle status to "${confirmMove?.statusName}". This action affects the vehicle record and cannot be undone automatically.`}
-        confirmLabel="Move Vehicle"
+        title={`להעביר ל"${confirmMove?.statusName}"?`}
+        description={`פעולה זו תשנה את סטטוס הרכב ל"${confirmMove?.statusName}". השינוי משפיע על רשומת הרכב ולא ניתן לביטול אוטומטי.`}
+        confirmLabel="העבר רכב"
         danger
       />
     </div>

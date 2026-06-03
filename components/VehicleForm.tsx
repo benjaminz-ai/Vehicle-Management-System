@@ -30,6 +30,7 @@ const defaultData: VehicleFormData = {
   mileage: 0,
   licenseExpiry: "",
   alertsEnabled: true,
+  notes: "",
 };
 
 export function VehicleForm({
@@ -405,6 +406,18 @@ export function VehicleForm({
             {form.alertsEnabled ? "התראות פעילות" : "התראות כבויות"}
           </button>
         </div>
+      </div>
+
+      {/* Free-text notes */}
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">הערות / מלל חופשי</label>
+        <textarea
+          value={form.notes ?? ""}
+          onChange={e => set("notes", e.target.value)}
+          rows={3}
+          placeholder="לדוגמה: קוד כניסה לרכב, מיקום מפתח, הערות תחזוקה או כל מידע נוסף..."
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 focus:border-[#209dd7] transition-all resize-y"
+        />
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

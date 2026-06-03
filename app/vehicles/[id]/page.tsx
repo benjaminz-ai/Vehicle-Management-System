@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { VehicleForm } from "@/components/VehicleForm";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2, Shield, Plus, Bell, BellOff, Calendar } from "lucide-react";
+import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2, Shield, Plus, Bell, BellOff, Calendar, StickyNote, Save, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { storage } from "@/lib/firebase";
@@ -39,6 +39,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAddInsurance, setShowAddInsurance] = useState(false);
   const [insForm, setInsForm] = useState({ insuranceTypeId: "", insuranceCompanyId: "", startDate: "", endDate: "" });
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   if (!vehicle) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -131,6 +134,59 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           </CardBody>
         </Card>
       </div>
+
+      {/* Notes / free text */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <StickyNote size={16} className="text-amber-500" />
+            <h2 className="text-sm font-semibold text-[#032147]">הערות / מלל חופשי</h2>
+          </div>
+          {!editingNotes && (
+            <Button variant="outline" size="sm" onClick={() => { setNotesDraft(vehicle.notes ?? ""); setEditingNotes(true); }}>
+              <Edit size={14} /> {vehicle.notes?.trim() ? "ערוך" : "הוסף"}
+            </Button>
+          )}
+        </CardHeader>
+        <CardBody>
+          {editingNotes ? (
+            <div className="space-y-3">
+              <textarea
+                autoFocus
+                value={notesDraft}
+                onChange={e => setNotesDraft(e.target.value)}
+                rows={4}
+                placeholder="לדוגמה: קוד כניסה לרכב, מיקום מפתח, הערות תחזוקה או כל מידע נוסף..."
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#209dd7]/30 focus:border-[#209dd7] transition-all resize-y"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={savingNotes}
+                  onClick={async () => {
+                    setSavingNotes(true);
+                    try {
+                      await updateVehicle(id, { notes: notesDraft.trim() });
+                      setEditingNotes(false);
+                    } finally {
+                      setSavingNotes(false);
+                    }
+                  }}
+                >
+                  {savingNotes ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} שמור
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setEditingNotes(false)} type="button">
+                  <X size={14} /> ביטול
+                </Button>
+              </div>
+            </div>
+          ) : vehicle.notes?.trim() ? (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{vehicle.notes}</p>
+          ) : (
+            <p className="text-sm text-gray-400">אין הערות. לחצו "הוסף" כדי לכתוב מלל חופשי (קוד כניסה, מידע נוסף וכו').</p>
+          )}
+        </CardBody>
+      </Card>
 
       {/* Service Records */}
       <Card>
