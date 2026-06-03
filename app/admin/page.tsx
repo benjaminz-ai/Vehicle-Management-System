@@ -148,20 +148,27 @@ export default function AdminPage() {
         name: editForm.tenantName,
         adminEmail: editForm.adminEmail,
       });
-      // Update user doc if firstName/lastName provided
-      if (editForm.adminFirstName || editForm.adminLastName) {
-        // Find user by tenantId from users collection
-        const { getDocs, query, where } = await import("firebase/firestore");
-        const q = query(collection(db, "users"), where("tenantId", "==", t.id));
-        const snap = await getDocs(q);
-        snap.forEach(async (userDoc) => {
-          const updates: Record<string, string> = {};
-          if (editForm.adminFirstName) updates.firstName = editForm.adminFirstName;
-          if (editForm.adminLastName) updates.lastName = editForm.adminLastName;
-          if (editForm.adminEmail) updates.email = editForm.adminEmail;
-          if (editForm.tenantName) updates.tenantName = editForm.tenantName;
-          await setDoc(doc(db, "users", userDoc.id), updates, { merge: true });
-        });
+
+      // Always keep the linked user doc in sync (email + tenantName always,
+      // name only when provided). Previously this ran only if a name was typed,
+      // so changing just the email left the users doc with the old email.
+      const { getDocs, query, where } = await import("firebase/firestore");
+      const q = query(collection(db, "users"), where("tenantId", "==", t.id));
+      const snap = await getDocs(q);
+
+      const updates: Record<string, string> = {};
+      if (editForm.adminEmail) updates.email = editForm.adminEmail;
+      if (editForm.tenantName) updates.tenantName = editForm.tenantName;
+      if (editForm.adminFirstName) updates.firstName = editForm.adminFirstName;
+      if (editForm.adminLastName) updates.lastName = editForm.adminLastName;
+
+      if (Object.keys(updates).length > 0) {
+        // await all writes so the success message reflects completed updates
+        await Promise.all(
+          snap.docs.map(userDoc =>
+            setDoc(doc(db, "users", userDoc.id), updates, { merge: true })
+          )
+        );
       }
       setSuccess(`הלקוח "${editForm.tenantName}" עודכן בהצלחה`);
       setEditingTenant(null);
@@ -503,15 +510,4 @@ export default function AdminPage() {
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+       
