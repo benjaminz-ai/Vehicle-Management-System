@@ -168,4 +168,5 @@ export type AssignmentLog = {
   startDate: string;
   endDate?: string;
   notes?: string;
+  role?: "main" | "secondary";
 };

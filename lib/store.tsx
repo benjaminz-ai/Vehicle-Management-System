@@ -233,7 +233,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         });
       }
       // Create assignment log entry (same as saveVehicleAssignment does)
-      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId: ref.id, startDate: nowIsrael() });
+      const role = dId === v.mainDriverId ? "main" : "secondary";
+      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId: ref.id, startDate: nowIsrael(), role });
     }
     return ref.id;
   }, [col, docRef, state.drivers]);
@@ -257,7 +258,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       // Open new driver's log
       if (v.mainDriverId) {
-        await addDoc(col("assignmentLogs"), { driverId: v.mainDriverId, vehicleId: id, startDate: nowIsrael() });
+        await addDoc(col("assignmentLogs"), { driverId: v.mainDriverId, vehicleId: id, startDate: nowIsrael(), role: "main" });
         const newDriver = state.drivers.find(d => d.id === v.mainDriverId);
         if (newDriver) await updateDoc(docRef("drivers", v.mainDriverId), {
           assignedVehicleIds: [...newDriver.assignedVehicleIds, id],
@@ -348,7 +349,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         assignedVehicleIds: [...driver.assignedVehicleIds, vehicleId],
       });
     }
-    await addDoc(col("assignmentLogs"), { driverId, vehicleId, startDate: nowIsrael() });
+    await addDoc(col("assignmentLogs"), { driverId, vehicleId, startDate: nowIsrael(), role: "main" });
   }, [col, docRef, state.vehicles, state.drivers]);
 
   const unassignDriverFromVehicle = useCallback(async (driverId: string, vehicleId: string) => {
@@ -396,7 +397,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           assignedVehicleIds: [...d.assignedVehicleIds, vehicleId],
         });
       }
-      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId, startDate: nowIsrael() });
+      const role = dId === newMainId ? "main" : "secondary";
+      await addDoc(col("assignmentLogs"), { driverId: dId, vehicleId, startDate: nowIsrael(), role });
     }
   }, [col, docRef, state.vehicles, state.drivers, state.assignmentLogs]);
 
@@ -554,6 +556,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
+}
+
+export function useStore() {
+  const ctx = useContext(StoreContext);
+  if (!ctx) throw new Error("useStore must be used within StoreProvider");
+  return ctx;
+}
+r>
 }
 
 export function useStore() {
