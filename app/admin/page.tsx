@@ -510,4 +510,15 @@ export default function AdminPage() {
                           </button>
                         </div>
                       </td>
-       
+                    </tr>
+                  )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
