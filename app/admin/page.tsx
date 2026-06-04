@@ -386,13 +386,14 @@ export default function AdminPage() {
         )}
 
         {/* Tenants list */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-clip">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {tenants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <Building2 size={32} className="mb-3 opacity-30" />
               <p className="text-sm">אין לקוחות עדיין — לחץ על "לקוח חדש" להתחיל</p>
             </div>
           ) : (
+            <div className="overflow-auto max-h-[calc(100vh-220px)]">
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_rgb(0_0_0/0.04)]">
                 <tr className="border-b border-gray-100">
@@ -534,6 +535,7 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

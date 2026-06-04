@@ -240,8 +240,8 @@ export default function DocumentsPage() {
         </Select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-clip">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-auto max-h-[calc(100vh-220px)]">
         <table className="w-full text-sm min-w-[550px]">
           <thead className="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_rgb(0_0_0/0.04)]">
             <tr className="border-b border-gray-100 bg-gray-50">
