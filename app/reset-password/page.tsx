@@ -18,13 +18,27 @@ function ResetPasswordForm() {
   const [error, setError]           = useState("");
   const [done, setDone]             = useState(false);
   const [codeValid, setCodeValid]   = useState<boolean | null>(null);
+  const [errCode, setErrCode]       = useState("");
 
   useEffect(() => {
-    if (!oobCode) { setCodeValid(false); return; }
+    if (!oobCode) { setErrCode("missing-code"); setCodeValid(false); return; }
     verifyPasswordResetCode(auth, oobCode)
       .then(em => { setEmail(em); setCodeValid(true); })
-      .catch(() => setCodeValid(false));
+      .catch((e: unknown) => {
+        const code = (e as { code?: string })?.code ?? "unknown";
+        console.error("verifyPasswordResetCode failed:", code, e);
+        setErrCode(code);
+        setCodeValid(false);
+      });
   }, [oobCode]);
+
+  const reasonFor = (c: string) =>
+    c === "auth/expired-action-code" ? "הקישור פג תוקף (הונפק לפני יותר משעה)."
+    : c === "auth/invalid-action-code" ? "הקישור כבר שומש, או שנשלח אחריו קישור חדש יותר."
+    : c === "auth/user-disabled" ? "חשבון המשתמש מושבת — פנה למנהל המערכת."
+    : c === "auth/user-not-found" ? "לא נמצא חשבון תואם לקישור."
+    : c === "missing-code" ? "הקישור חסר קוד אימות."
+    : "הקישור אינו תקף או כבר נעשה בו שימוש.";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,8 +49,10 @@ function ResetPasswordForm() {
     try {
       await confirmPasswordReset(auth, oobCode, password);
       setDone(true);
-    } catch {
-      setError("שגיאה באיפוס הסיסמה — ייתכן שהקישור פג תוקף");
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code ?? "";
+      console.error("confirmPasswordReset failed:", code, e);
+      setError(code ? reasonFor(code) : "שגיאה באיפוס הסיסמה");
     } finally {
       setBusy(false);
     }
@@ -73,7 +89,8 @@ function ResetPasswordForm() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-[#032147] mb-1">הקישור אינו תקף</h1>
-                <p className="text-sm text-gray-400">הקישור פג תוקף או כבר נעשה בו שימוש.</p>
+                <p className="text-sm text-gray-400">{reasonFor(errCode)}</p>
+                {errCode && <p className="text-[10px] text-gray-300 mt-1">קוד: {errCode}</p>}
               </div>
               <a href="/forgot-password"
                 className="inline-block text-sm font-semibold text-[#209dd7] hover:text-[#1880b0] transition-colors">

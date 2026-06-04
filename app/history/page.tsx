@@ -298,10 +298,10 @@ export default function HistoryPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-clip">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[650px]">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-[#f8fafc] shadow-[0_1px_0_rgb(0_0_0/0.04)]">
               <tr className="border-b border-gray-50 bg-[#f8fafc]">
                 <th className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">נהג</th>
                 <th className="text-right px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">תפקיד</th>
