@@ -62,9 +62,15 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     if (!effectiveTenantId) { setRows([]); setLoadingRows(false); return; }
     setLoadingRows(true);
-    const snap = await getDocs(query(collection(db, "users"), where("tenantId", "==", effectiveTenantId)));
-    setRows(snap.docs.map(d => ({ uid: d.id, ...(d.data() as Omit<Row, "uid">) })));
-    setLoadingRows(false);
+    try {
+      const snap = await getDocs(query(collection(db, "users"), where("tenantId", "==", effectiveTenantId)));
+      setRows(snap.docs.map(d => ({ uid: d.id, ...(d.data() as Omit<Row, "uid">) })));
+    } catch (err: unknown) {
+      setRows([]);
+      setError(err instanceof Error ? "שגיאה בטעינת המשתמשים: " + err.message : "שגיאה בטעינת המשתמשים");
+    } finally {
+      setLoadingRows(false);
+    }
   }, [effectiveTenantId]);
 
   useEffect(() => { load(); }, [load]);
@@ -83,9 +89,10 @@ export default function UsersPage() {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) throw new Error("כתובת מייל לא תקינה");
       if (form.password.length < 6) throw new Error("הסיסמה חייבת להכיל לפחות 6 תווים");
 
-      // Guard: don't hijack an email that already belongs to a user
-      const existing = await getDocs(query(collection(db, "users"), where("email", "==", form.email.trim())));
-      if (!existing.empty) throw new Error("כתובת המייל כבר משויכת למשתמש קיים");
+      // Guard: don't add an email that already exists in this tenant (checked in-memory
+      // against the loaded list — a cross-collection query on email isn't permitted by rules)
+      if (rows.some(r => (r.email || "").toLowerCase() === form.email.trim().toLowerCase()))
+        throw new Error("כתובת המייל כבר משויכת למשתמש בארגון");
 
       const uid = await createAuthUser(form.email.trim(), form.password);
       await setDoc(doc(db, "users", uid), {
