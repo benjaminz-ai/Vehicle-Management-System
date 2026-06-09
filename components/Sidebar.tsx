@@ -14,8 +14,10 @@ import {
   Settings,
   X,
   Bell,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
 
 const navGroups = [
   {
@@ -48,6 +50,13 @@ const navGroups = [
 
 export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
+  const { profile } = useAuth();
+  const canManageUsers = profile?.role === "tenant_admin" || profile?.role === "super_admin";
+  const groups = navGroups.map(g =>
+    g.label === "ניהול צי" && canManageUsers
+      ? { ...g, items: [...g.items, { href: "/users", label: "משתמשים", icon: UserCog }] }
+      : g
+  );
 
   return (
     <>
@@ -93,7 +102,7 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-5 flex flex-col gap-6 overflow-y-auto">
-        {navGroups.map(group => (
+        {groups.map(group => (
           <div key={group.label}>
             <p className="px-3 mb-2 text-[10px] font-semibold text-white/20 uppercase tracking-[0.12em]">
               {group.label}
