@@ -1,12 +1,12 @@
 "use client";
-import { useState, useMemo, useRef } from "react";
+import { Fragment, useState, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/Dialog";
-import { Search, Calendar, Car, Users, Clock, Download, Printer, ChevronDown, X, LogOut } from "lucide-react";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { Search, Calendar, Car, Users, Clock, Download, Printer, ChevronDown, X, LogOut, Repeat } from "lucide-react";
+import { formatDate, formatDateTime, COURTESY_REASON_LABELS } from "@/lib/utils";
 
 function daysBetween(start: string, end: string) {
   return Math.round((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24));
@@ -319,8 +319,20 @@ export default function HistoryPage() {
                 const driver = drivers.find(d => d.id === log.driverId);
                 const vehicle = vehicles.find(v => v.id === log.vehicleId);
                 const isActive = !log.endDate;
+                // Find courtesy vehicles for this main vehicle whose period overlaps with this assignment
+                // A courtesy is relevant if its start is within the assignment period
+                const logStart = log.startDate.slice(0, 10);
+                const logEnd = log.endDate ? log.endDate.slice(0, 10) : "9999-12-31";
+                const courtesyPeriods = vehicles.filter(v =>
+                  v.isCourtesy &&
+                  v.parentVehicleId === log.vehicleId &&
+                  v.courtesyStartDate &&
+                  v.courtesyStartDate >= logStart &&
+                  v.courtesyStartDate <= logEnd
+                ).sort((a, b) => (a.courtesyStartDate ?? "").localeCompare(b.courtesyStartDate ?? ""));
                 return (
-                  <tr key={log.id} className="hover:bg-[#f8fafc] transition-colors group">
+                <Fragment key={log.id}>
+                  <tr className="hover:bg-[#f8fafc] transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-lg bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-[10px] shrink-0">
@@ -373,6 +385,59 @@ export default function HistoryPage() {
                       )}
                     </td>
                   </tr>
+                  {/* Courtesy sub-periods: shown nested under the main assignment row */}
+                  {courtesyPeriods.map(c => {
+                    const cActive = !c.courtesyActualReturnDate;
+                    return (
+                      <tr key={`courtesy-${c.id}`} className="bg-amber-50/40 hover:bg-amber-50/70 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2 pr-9 text-[11px] text-amber-700 font-medium">
+                            <span className="text-amber-400">└</span>
+                            <Repeat size={10} />
+                            <span>תקופת רכב חלופי</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200">חלופי</span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <Car size={11} className="text-amber-600 shrink-0" />
+                            <div>
+                              <div className="text-xs text-gray-700">{c.manufacturer} {c.model}</div>
+                              <div className="text-[10px] font-mono text-gray-400">{c.licensePlate}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-600 tabular-nums">{c.courtesyStartDate ? formatDate(c.courtesyStartDate) : "—"}</td>
+                        <td className="px-4 py-2.5">
+                          {cActive
+                            ? <span className="text-[11px] text-amber-600 font-semibold">פעיל</span>
+                            : <span className="text-xs text-gray-600 tabular-nums">{formatDate(c.courtesyActualReturnDate!)}</span>
+                          }
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-[11px] font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">
+                            {formatDuration(
+                              c.courtesyStartDate ?? "",
+                              c.courtesyActualReturnDate ?? undefined,
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {cActive
+                            ? <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full border border-amber-200">פעיל</span>
+                            : <span className="inline-flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full">הוחזר</span>
+                          }
+                        </td>
+                        <td className="px-4 py-2.5 text-[11px] text-amber-600 max-w-[140px] truncate">
+                          {c.courtesyReason ? COURTESY_REASON_LABELS[c.courtesyReason] : "—"}
+                        </td>
+                        <td className="px-4 py-2.5" />
+                      </tr>
+                    );
+                  })}
+                </Fragment>
                 );
               })}
               {filtered.length === 0 && (
