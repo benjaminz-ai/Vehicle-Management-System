@@ -286,7 +286,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   ): Promise<string> => {
     const parent = state.vehicles.find(v => v.id === parentVehicleId);
     if (!parent) throw new Error("Parent vehicle not found");
-    const payload: Omit<Vehicle, "id"> = {
+    const payload: Record<string, unknown> = {
       ...data,
       isCourtesy: true,
       parentVehicleId,
@@ -300,6 +300,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       documentIds: [],
       courtesyStartDate: data.courtesyStartDate ?? nowIsrael().slice(0, 10),
     };
+    // Firestore rejects `undefined` values - strip them before write
+    Object.keys(payload).forEach(k => { if (payload[k] === undefined) delete payload[k]; });
     const ref = await addDoc(col("vehicles"), payload);
     return ref.id;
   }, [col, state.vehicles]);
