@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import {
   Car, Users, Wrench, AlertTriangle, FileText,
-  TrendingUp, ArrowRight, Bell, Shield, Calendar,
+  TrendingUp, ArrowRight, Bell, Shield, Calendar, Repeat,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -79,9 +79,12 @@ export default function DashboardPage() {
     (s.isOperational === undefined && (s.name === "זמין" || s.name === "בשימוש"))
   );
   const operationalIds = new Set(operationalStatuses.map(s => s.id));
-  const activeCount = vehicles.filter(v => operationalIds.has(v.statusId)).length;
-  const companyOwned   = vehicles.filter(v => v.ownershipType === "company_owned").length;
-  const leasing        = vehicles.filter(v => v.ownershipType === "leasing").length;
+  // Count only fleet vehicles (not courtesies) for operational/ownership stats
+  const fleetVehicles = vehicles.filter(v => !v.isCourtesy);
+  const activeCount = fleetVehicles.filter(v => operationalIds.has(v.statusId)).length;
+  const companyOwned   = fleetVehicles.filter(v => v.ownershipType === "company_owned").length;
+  const leasing        = fleetVehicles.filter(v => v.ownershipType === "leasing").length;
+  const activeCourtesyCount = vehicles.filter(v => v.isCourtesy && !v.courtesyActualReturnDate).length;
   const fuelSplit      = fuelTypes.map(ft => ({
     name: ft.name,
     count: vehicles.filter(v => v.fuelTypeId === ft.id).length,
@@ -194,9 +197,26 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── Active courtesy banner ──────────────────────────────────────── */}
+      {activeCourtesyCount > 0 && (
+        <Link href="/vehicles" className="block">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4 hover:bg-amber-100/60 transition-colors">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Repeat size={20} className="text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-amber-800">
+                {activeCourtesyCount} {activeCourtesyCount === 1 ? "רכב חלופי פעיל" : "רכבים חלופיים פעילים"}
+              </div>
+              <div className="text-xs text-amber-700 mt-0.5">לצפייה ברשימה המלאה ובסטטוס כל אחד מהם</div>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* ── KPI cards ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="סה&quot;כ רכבים"   value={vehicles.length}       icon={Car}           accent="bg-sky-50 text-sky-600"     sub={`${companyOwned} בבעלות · ${leasing} ליסינג`} />
+        <KpiCard label="סה&quot;כ רכבים"   value={fleetVehicles.length}  icon={Car}           accent="bg-sky-50 text-sky-600"     sub={`${companyOwned} בבעלות · ${leasing} ליסינג`} />
         {statusCounts.map(s => (
           <div key={s.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: s.color + "22" }}>

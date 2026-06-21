@@ -26,11 +26,17 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         status?.name, vtype?.name, ftype?.name, v.leasingCompanyName,
       ].filter(Boolean).join(" ").toLowerCase();
       if (searchable.includes(q)) {
+        // Add courtesy marker to label/sub if relevant
+        const isCourtesyActive = v.isCourtesy && !v.courtesyActualReturnDate;
+        const isCourtesyReturned = v.isCourtesy && v.courtesyActualReturnDate;
+        const hasActiveCourtesy = !v.isCourtesy && vehicles.some(c => c.isCourtesy && c.parentVehicleId === v.id && !c.courtesyActualReturnDate);
+        const typeLabel = isCourtesyActive ? "🔄 חלופי" : isCourtesyReturned ? "חלופי הוחזר" : "רכב";
+        const subLine = hasActiveCourtesy ? `${status?.name ?? ""} · בחלופי` : (status?.name ?? "");
         found.push({
-          type: "רכב",
+          type: typeLabel,
           id: v.id,
           label: `${v.manufacturer} ${v.model} (${v.licensePlate})`,
-          sub: status?.name ?? "",
+          sub: subLine,
           href: `/vehicles/${v.id}`,
         });
       }

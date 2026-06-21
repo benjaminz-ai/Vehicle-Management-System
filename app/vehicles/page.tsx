@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { VehicleForm } from "@/components/VehicleForm";
-import { Plus, Trash2, Eye, Search, ChevronDown, X, SlidersHorizontal } from "lucide-react";
+import { Plus, Trash2, Eye, Search, ChevronDown, X, SlidersHorizontal, Repeat } from "lucide-react";
 import Link from "next/link";
 import type { Vehicle } from "@/types";
+import { getCourtesyStatus, formatDate, COURTESY_REASON_LABELS } from "@/lib/utils";
+import { CourtesyBadge } from "@/components/CourtesyPanel";
 
 function FilterSelect({ label, value, onChange, options }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -81,6 +83,8 @@ export default function VehiclesPage() {
   const [filterOwner, setFilterOwner] = useState("");
   const [filterAccidents, setFilterAccidents] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  // Courtesy tab: "fleet" = main vehicles only, "courtesy" = active courtesy, "returned" = returned courtesy
+  const [courtesyTab, setCourtesyTab] = useState<"fleet" | "courtesy" | "returned">("fleet");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -90,7 +94,16 @@ export default function VehiclesPage() {
 
   const activeFilterCount = [filterStatus, filterType, filterFuel, filterOwner, filterAccidents].filter(Boolean).length;
 
+  const fleetCount = useMemo(() => vehicles.filter(v => !v.isCourtesy).length, [vehicles]);
+  const activeCourtesyCount = useMemo(() => vehicles.filter(v => v.isCourtesy && !v.courtesyActualReturnDate).length, [vehicles]);
+  const returnedCourtesyCount = useMemo(() => vehicles.filter(v => v.isCourtesy && v.courtesyActualReturnDate).length, [vehicles]);
+
   const filtered = useMemo(() => vehicles.filter(v => {
+    // Courtesy tab filtering
+    if (courtesyTab === "fleet" && v.isCourtesy) return false;
+    if (courtesyTab === "courtesy" && !(v.isCourtesy && !v.courtesyActualReturnDate)) return false;
+    if (courtesyTab === "returned" && !(v.isCourtesy && v.courtesyActualReturnDate)) return false;
+
     if (search) {
       const q = search.toLowerCase();
       const status = vehicleStatuses.find(s => s.id === v.statusId);
@@ -108,7 +121,7 @@ export default function VehiclesPage() {
     if (filterAccidents === "yes" && v.accidentIds.length === 0) return false;
     if (filterAccidents === "no" && v.accidentIds.length > 0) return false;
     return true;
-  }), [vehicles, search, filterStatus, filterType, filterFuel, filterOwner, filterAccidents, vehicleStatuses, vehicleTypes, fuelTypes, drivers]);
+  }), [vehicles, courtesyTab, search, filterStatus, filterType, filterFuel, filterOwner, filterAccidents, vehicleStatuses, vehicleTypes, fuelTypes, drivers]);
 
   const filteredIds = useMemo(() => new Set(filtered.map(v => v.id)), [filtered]);
   const visibleSelected = useMemo(() => new Set([...selected].filter(id => filteredIds.has(id))), [selected, filteredIds]);
@@ -160,6 +173,33 @@ export default function VehiclesPage() {
         <Button onClick={() => setShowAdd(true)}>
           <Plus size={15} /> הוסף רכב
         </Button>
+      </div>
+
+      {/* Tabs: fleet / active courtesy / returned courtesy */}
+      <div className="flex items-center gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setCourtesyTab("fleet")}
+          className={["px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+            courtesyTab === "fleet" ? "border-[#209dd7] text-[#209dd7]" : "border-transparent text-gray-500 hover:text-gray-700"].join(" ")}
+        >
+          רכבי הצי <span className={["text-xs ms-1", courtesyTab === "fleet" ? "text-[#209dd7]" : "text-gray-400"].join(" ")}>({fleetCount})</span>
+        </button>
+        <button
+          onClick={() => setCourtesyTab("courtesy")}
+          className={["px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5",
+            courtesyTab === "courtesy" ? "border-amber-500 text-amber-600" : "border-transparent text-gray-500 hover:text-gray-700"].join(" ")}
+        >
+          <Repeat size={13} /> רכבים חלופיים פעילים <span className={["text-xs", courtesyTab === "courtesy" ? "text-amber-600" : "text-gray-400"].join(" ")}>({activeCourtesyCount})</span>
+        </button>
+        {returnedCourtesyCount > 0 && (
+          <button
+            onClick={() => setCourtesyTab("returned")}
+            className={["px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+              courtesyTab === "returned" ? "border-gray-500 text-gray-700" : "border-transparent text-gray-500 hover:text-gray-700"].join(" ")}
+          >
+            חלופיים שהוחזרו <span className="text-xs text-gray-400">({returnedCourtesyCount})</span>
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -237,21 +277,47 @@ export default function VehiclesPage() {
             <tbody className="divide-y divide-gray-50">
               {filtered.map(v => {
                 const isChecked = visibleSelected.has(v.id);
-                const mainDriver = drivers.find(d => d.id === v.mainDriverId);
-                const secondDriver = v.secondaryDriverIds?.[0] ? drivers.find(d => d.id === v.secondaryDriverIds[0]) : null;
+                const cStatus = getCourtesyStatus(v, vehicles);
+                // For courtesy vehicles, show inherited driver from parent
+                const driverSource = v.isCourtesy && v.parentVehicleId ? vehicles.find(x => x.id === v.parentVehicleId) : null;
+                const mainDriverId = driverSource ? driverSource.mainDriverId : v.mainDriverId;
+                const secondaryIds = driverSource ? driverSource.secondaryDriverIds : v.secondaryDriverIds;
+                const mainDriver = drivers.find(d => d.id === mainDriverId);
+                const secondDriver = secondaryIds?.[0] ? drivers.find(d => d.id === secondaryIds[0]) : null;
                 const status = vehicleStatuses.find(s => s.id === v.statusId);
                 const vtype = vehicleTypes.find(t => t.id === v.vehicleTypeId);
                 const ftype = fuelTypes.find(f => f.id === v.fuelTypeId);
+                const isReturnedCourtesy = v.isCourtesy && v.courtesyActualReturnDate;
                 return (
                   <tr key={v.id} onClick={() => toggleOne(v.id)}
-                    className={["transition-colors cursor-pointer group", isChecked ? "bg-[#209dd7]/5" : "hover:bg-[#f8fafc]"].join(" ")}>
+                    className={["transition-colors cursor-pointer group",
+                      isChecked ? "bg-[#209dd7]/5" :
+                      cStatus?.type === "is_courtesy" ? "bg-amber-50/40 hover:bg-amber-50/70" :
+                      isReturnedCourtesy ? "bg-gray-50/40 hover:bg-gray-50/70 opacity-75" :
+                      "hover:bg-[#f8fafc]",
+                    ].join(" ")}>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={isChecked} onChange={() => toggleOne(v.id)}
                         className="w-4 h-4 rounded border-gray-300 text-[#209dd7] cursor-pointer" />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-[#032147]">{v.manufacturer} {v.model}</div>
-                      <div className="text-xs text-gray-400">{v.year}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-[#032147]">{v.manufacturer} {v.model}</span>
+                        {cStatus?.type === "is_courtesy" && <CourtesyBadge variant="is_courtesy" />}
+                        {cStatus?.type === "has_courtesy" && <CourtesyBadge variant="has_courtesy" />}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {v.year}
+                        {cStatus?.type === "is_courtesy" && cStatus.parent && (
+                          <> · מחליף את <span className="text-amber-700 font-medium">{cStatus.parent.licensePlate}</span></>
+                        )}
+                        {cStatus?.type === "has_courtesy" && (
+                          <> · חלופי: <span className="text-amber-700 font-medium">{cStatus.courtesy.licensePlate}</span></>
+                        )}
+                        {isReturnedCourtesy && v.courtesyActualReturnDate && (
+                          <> · הוחזר {formatDate(v.courtesyActualReturnDate)}</>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-lg">{v.licensePlate}</span>

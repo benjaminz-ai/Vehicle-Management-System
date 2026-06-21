@@ -1,5 +1,7 @@
 export type OwnershipType = "company_owned" | "leasing";
 
+export type CourtesyReason = "service" | "accident" | "license" | "other";
+
 export type AccidentStatus =
   | "new_report"
   | "under_review"
@@ -44,6 +46,14 @@ export type Vehicle = {
   serviceRecordIds: string[];
   accidentIds: string[];
   documentIds: string[];
+
+  // Courtesy vehicle fields - only set when isCourtesy === true
+  isCourtesy?: boolean;
+  parentVehicleId?: string;             // The main vehicle this is replacing
+  courtesyStartDate?: string;           // When it entered the fleet
+  courtesyExpectedReturnDate?: string;  // Expected return to leasing co
+  courtesyActualReturnDate?: string;    // Set when returned; null/undefined = still active
+  courtesyReason?: CourtesyReason;
 };
 
 export type InsuranceCompany = {

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Edit, AlertTriangle, FileText, Car, Trash2, Upload, Eye, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit, AlertTriangle, FileText, Car, Trash2, Upload, Eye, Download, Loader2, Repeat } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { storage } from "@/lib/firebase";
@@ -70,9 +70,15 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
     </div>
   );
 
-  const assignedVehicles = vehicles.filter(v => v.mainDriverId === id || v.secondaryDriverIds.includes(id));
+  // Direct assignments are only to FLEET vehicles (not courtesy ones, which inherit)
+  const assignedVehicles = vehicles.filter(v => !v.isCourtesy && (v.mainDriverId === id || v.secondaryDriverIds.includes(id)));
   const driverAccidents = accidentCards.filter(a => a.driverId === id).sort((a, b) => b.accidentDate.localeCompare(a.accidentDate));
   const driverDocs = documents.filter(d => d.relatedEntityType === "driver" && d.relatedEntityId === id);
+  // For each assigned main vehicle, find an active courtesy (if any) - the "currently driven" car
+  const activeCourtesyByParent: Record<string, typeof vehicles[number] | undefined> = {};
+  assignedVehicles.forEach(v => {
+    activeCourtesyByParent[v.id] = vehicles.find(c => c.isCourtesy && c.parentVehicleId === v.id && !c.courtesyActualReturnDate);
+  });
 
   const accidentBadge = (s: string) => {
     const m: Record<string, { label: string; variant: "danger" | "warning" | "blue" | "gray" }> = {
@@ -133,16 +139,30 @@ export default function DriverDetailPage({ params }: { params: Promise<{ id: str
             {assignedVehicles.length === 0 && <div className="px-5 py-4 text-sm text-gray-400">No vehicles assigned.</div>}
             {assignedVehicles.map(v => {
               const status = vehicleStatuses.find(s => s.id === v.statusId);
+              const activeCourtesy = activeCourtesyByParent[v.id];
               return (
-                <div key={v.id} className="px-5 py-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">{v.manufacturer} {v.model}</div>
-                    <div className="text-xs text-gray-400">{v.licensePlate} · {v.year}</div>
+                <div key={v.id} className="px-5 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">{v.manufacturer} {v.model}</div>
+                      <div className="text-xs text-gray-400">{v.licensePlate} · {v.year}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {status && <div className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: status.color + "20", color: status.color }}>{status.name}</div>}
+                      <Link href={`/vehicles/${v.id}`} className="text-xs text-[#209dd7] hover:underline">View</Link>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {status && <div className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: status.color + "20", color: status.color }}>{status.name}</div>}
-                    <Link href={`/vehicles/${v.id}`} className="text-xs text-[#209dd7] hover:underline">View</Link>
-                  </div>
+                  {activeCourtesy && (
+                    <Link href={`/vehicles/${activeCourtesy.id}`} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 hover:bg-amber-100/60 transition-colors">
+                      <Repeat size={12} className="text-amber-600 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-amber-800 font-semibold">נוסע כעת ברכב חלופי</div>
+                        <div className="text-[11px] text-amber-700 truncate">
+                          {activeCourtesy.manufacturer} {activeCourtesy.model} · {activeCourtesy.licensePlate}
+                        </div>
+                      </div>
+                    </Link>
+                  )}
                 </div>
               );
             })}

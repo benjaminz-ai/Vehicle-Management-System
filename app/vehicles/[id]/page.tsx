@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 import { VehicleForm } from "@/components/VehicleForm";
-import { formatDate, formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2, Shield, Plus, Bell, BellOff, Calendar, StickyNote, Save, X } from "lucide-react";
+import { formatDate, formatCurrency, getCourtesyStatus, resolveVehicleDrivers, COURTESY_REASON_LABELS } from "@/lib/utils";
+import { ArrowLeft, Edit, Wrench, AlertTriangle, FileText, Trash2, Upload, Eye, Download, Loader2, Shield, Plus, Bell, BellOff, Calendar, StickyNote, Save, X, Repeat, ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import type { Vehicle } from "@/types";
+import { CourtesyPanel, CourtesyBadge } from "@/components/CourtesyPanel";
 
 export default function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -50,8 +51,11 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 
-  const mainDriver = drivers.find(d => d.id === vehicle.mainDriverId);
-  const secondDriver = vehicle.secondaryDriverIds?.[0] ? drivers.find(d => d.id === vehicle.secondaryDriverIds[0]) : null;
+  // Courtesy resolution - drivers inherit from parent if courtesy
+  const courtesyStatus = getCourtesyStatus(vehicle, vehicles);
+  const resolvedDrivers = resolveVehicleDrivers(vehicle, vehicles);
+  const mainDriver = drivers.find(d => d.id === resolvedDrivers.mainDriverId);
+  const secondDriver = resolvedDrivers.secondaryDriverIds?.[0] ? drivers.find(d => d.id === resolvedDrivers.secondaryDriverIds[0]) : null;
   const status = vehicleStatuses.find(s => s.id === vehicle.statusId);
   const vtype = vehicleTypes.find(t => t.id === vehicle.vehicleTypeId);
   const ftype = fuelTypes.find(f => f.id === vehicle.fuelTypeId);
@@ -77,7 +81,11 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><ArrowLeft size={18} /></button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-[#032147]">{vehicle.manufacturer} {vehicle.model}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-[#032147]">{vehicle.manufacturer} {vehicle.model}</h1>
+            {courtesyStatus?.type === "is_courtesy" && <CourtesyBadge variant="is_courtesy" />}
+            {courtesyStatus?.type === "has_courtesy" && <CourtesyBadge variant="has_courtesy" />}
+          </div>
           <p className="text-sm text-[#888888]">{vehicle.licensePlate} · {vehicle.year}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -89,6 +97,28 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           <Button variant="danger" size="sm" onClick={() => setDeleteVehicleConfirm(true)}><Trash2 size={14} /></Button>
         </div>
       </div>
+
+      {/* Courtesy banner - displayed when vehicle IS an active courtesy */}
+      {courtesyStatus?.type === "is_courtesy" && courtesyStatus.parent && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4 flex-wrap">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+            <Repeat size={18} className="text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-amber-700 font-semibold uppercase tracking-wide">רכב חלופי</div>
+            <div className="text-sm text-gray-700 mt-0.5">
+              מחליף את <Link href={`/vehicles/${courtesyStatus.parent.id}`} className="font-bold text-[#032147] hover:text-amber-600">{courtesyStatus.parent.manufacturer} {courtesyStatus.parent.model} ({courtesyStatus.parent.licensePlate})</Link>
+              {vehicle.courtesyStartDate && <> · החל מ-{formatDate(vehicle.courtesyStartDate)}</>}
+              {vehicle.courtesyExpectedReturnDate && <> · צפוי להחזרה {formatDate(vehicle.courtesyExpectedReturnDate)}</>}
+              {vehicle.courtesyReason && <> · סיבה: {COURTESY_REASON_LABELS[vehicle.courtesyReason]}</>}
+            </div>
+            <div className="text-[11px] text-amber-700 mt-1">הנהג והליסינג יורשים מהרכב הראשי</div>
+          </div>
+          <Link href={`/vehicles/${courtesyStatus.parent.id}`}>
+            <Button variant="outline" size="sm"><ArrowLeftRight size={13} /> פתח רכב ראשי</Button>
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Details */}
@@ -118,9 +148,20 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Drivers */}
         <Card>
-          <CardHeader><h2 className="text-sm font-semibold text-[#032147]">Assigned Drivers</h2></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-[#032147]">Assigned Drivers</h2>
+              {resolvedDrivers.inherited && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-200">
+                  <Repeat size={9} /> ירש מאב
+                </span>
+              )}
+            </div>
+          </CardHeader>
           <CardBody className="space-y-3">
-            {[mainDriver, secondDriver].filter(Boolean).map((d, i) => d && (
+            {[mainDriver, secondDriver].filter(Boolean).length === 0 ? (
+              <p className="text-xs text-gray-400">אין נהגים משויכים{resolvedDrivers.inherited ? " לרכב הראשי" : ""}.</p>
+            ) : [mainDriver, secondDriver].filter(Boolean).map((d, i) => d && (
               <div key={d.id} className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-sm">
                   {d.firstName[0]}{d.lastName[0]}
@@ -187,6 +228,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ id: st
           )}
         </CardBody>
       </Card>
+
+      {/* Courtesy panel - only on main vehicles (not on a courtesy itself) */}
+      {!vehicle.isCourtesy && <CourtesyPanel vehicle={vehicle} />}
 
       {/* Service Records */}
       <Card>

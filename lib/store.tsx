@@ -54,6 +54,8 @@ type StoreContextType = AppState & {
   updateVehicle: (id: string, v: Partial<Vehicle>) => Promise<void>;
   deleteVehicle: (id: string) => Promise<void>;
   moveVehicleStatus: (vehicleId: string, statusId: string) => Promise<void>;
+  addCourtesyVehicle: (parentVehicleId: string, data: Omit<Vehicle, "id" | "isCourtesy" | "parentVehicleId" | "mainDriverId" | "secondaryDriverIds" | "serviceRecordIds" | "accidentIds" | "documentIds">) => Promise<string>;
+  markCourtesyReturned: (courtesyId: string, returnDate?: string) => Promise<void>;
   addDriver: (d: Omit<Driver, "id" | "fullName">) => Promise<void>;
   updateDriver: (id: string, d: Partial<Driver>) => Promise<void>;
   deleteDriver: (id: string) => Promise<void>;
@@ -273,6 +275,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const moveVehicleStatus = useCallback(async (vehicleId: string, statusId: string) => {
     await updateDoc(docRef("vehicles", vehicleId), { statusId });
+  }, [docRef]);
+
+  // ── Courtesy Vehicles ─────────────────────────────────────────────────────────
+  // A courtesy vehicle is a regular Vehicle with isCourtesy=true and parentVehicleId.
+  // It inherits driver(s) from its parent dynamically (no AssignmentLog needed).
+  const addCourtesyVehicle = useCallback(async (
+    parentVehicleId: string,
+    data: Omit<Vehicle, "id" | "isCourtesy" | "parentVehicleId" | "mainDriverId" | "secondaryDriverIds" | "serviceRecordIds" | "accidentIds" | "documentIds">,
+  ): Promise<string> => {
+    const parent = state.vehicles.find(v => v.id === parentVehicleId);
+    if (!parent) throw new Error("Parent vehicle not found");
+    const payload: Omit<Vehicle, "id"> = {
+      ...data,
+      isCourtesy: true,
+      parentVehicleId,
+      // Inherit operational fields from parent
+      mainDriverId: "",          // Resolved dynamically via resolveVehicleDrivers
+      secondaryDriverIds: [],
+      leasingCompanyName: parent.leasingCompanyName ?? "",
+      ownershipType: parent.ownershipType,
+      serviceRecordIds: [],
+      accidentIds: [],
+      documentIds: [],
+      courtesyStartDate: data.courtesyStartDate ?? nowIsrael().slice(0, 10),
+    };
+    const ref = await addDoc(col("vehicles"), payload);
+    return ref.id;
+  }, [col, state.vehicles]);
+
+  const markCourtesyReturned = useCallback(async (courtesyId: string, returnDate?: string) => {
+    const date = returnDate ?? nowIsrael().slice(0, 10);
+    await updateDoc(docRef("vehicles", courtesyId), { courtesyActualReturnDate: date });
   }, [docRef]);
 
   // ── Drivers ───────────────────────────────────────────────────────────────────
@@ -524,6 +558,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     updateVehicle,
     deleteVehicle,
     moveVehicleStatus,
+    addCourtesyVehicle,
+    markCourtesyReturned,
     addDriver,
     updateDriver,
     deleteDriver,

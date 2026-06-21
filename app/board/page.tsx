@@ -24,21 +24,35 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 import { GripVertical, Car, AlertTriangle, Wrench, Users, StickyNote } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getCourtesyStatus } from "@/lib/utils";
 import type { Vehicle, VehicleStatus } from "@/types";
 import Link from "next/link";
+import { CourtesyBadge } from "@/components/CourtesyPanel";
 
 function VehicleCard({ vehicle, isDragging }: { vehicle: Vehicle; isDragging?: boolean }) {
-  const { drivers, vehicleStatuses, accidentCards } = useStore();
-  const mainDriver = drivers.find(d => d.id === vehicle.mainDriverId);
-  const secondDriver = vehicle.secondaryDriverIds.length > 0 ? drivers.find(d => d.id === vehicle.secondaryDriverIds[0]) : null;
+  const { drivers, vehicleStatuses, accidentCards, vehicles } = useStore();
+  const cStatus = getCourtesyStatus(vehicle, vehicles);
+  // Inherit drivers if courtesy
+  const driverSource = vehicle.isCourtesy && vehicle.parentVehicleId ? vehicles.find(x => x.id === vehicle.parentVehicleId) : null;
+  const mainDriverId = driverSource ? driverSource.mainDriverId : vehicle.mainDriverId;
+  const secondaryIds = driverSource ? driverSource.secondaryDriverIds : vehicle.secondaryDriverIds;
+  const mainDriver = drivers.find(d => d.id === mainDriverId);
+  const secondDriver = secondaryIds.length > 0 ? drivers.find(d => d.id === secondaryIds[0]) : null;
   const openAccidents = accidentCards.filter(a => a.vehicleId === vehicle.id && a.status !== "closed").length;
 
   return (
-    <div className={cn("bg-white rounded-xl border border-gray-200 p-3 shadow-sm select-none", isDragging && "shadow-2xl rotate-1 opacity-90")}>
+    <div className={cn(
+      "rounded-xl border p-3 shadow-sm select-none",
+      cStatus?.type === "is_courtesy" ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200",
+      isDragging && "shadow-2xl rotate-1 opacity-90",
+    )}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <div className="text-sm font-semibold text-[#032147]">{vehicle.manufacturer} {vehicle.model}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-[#032147] truncate">{vehicle.manufacturer} {vehicle.model}</span>
+            {cStatus?.type === "is_courtesy" && <CourtesyBadge variant="is_courtesy" />}
+            {cStatus?.type === "has_courtesy" && <CourtesyBadge variant="has_courtesy" />}
+          </div>
           <div className="text-xs text-gray-500 font-mono">{vehicle.licensePlate}</div>
         </div>
         <div className="text-gray-300 cursor-grab active:cursor-grabbing mt-0.5">
@@ -158,7 +172,11 @@ export default function BoardPage() {
   const vehiclesByStatus = useMemo(() => {
     const map: Record<string, Vehicle[]> = {};
     sortedStatuses.forEach(s => { map[s.id] = []; });
-    vehicles.forEach(v => { if (map[v.statusId]) map[v.statusId].push(v); });
+    // Show only fleet vehicles + active courtesies on the board (returned courtesies are archived)
+    vehicles.forEach(v => {
+      if (v.isCourtesy && v.courtesyActualReturnDate) return;
+      if (map[v.statusId]) map[v.statusId].push(v);
+    });
     return map;
   }, [vehicles, sortedStatuses]);
 
