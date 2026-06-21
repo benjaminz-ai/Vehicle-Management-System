@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Repeat, Plus, CheckCircle2, ArrowLeftRight, X, Calendar, AlertCircle } from "lucide-react";
+import { Repeat, Plus, CheckCircle2, ArrowLeftRight, X, Calendar, AlertCircle, Check } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -15,7 +15,7 @@ import type { Vehicle, CourtesyReason } from "@/types";
  * Shows the active courtesy (if any) prominently + courtesy history.
  */
 export function CourtesyPanel({ vehicle }: { vehicle: Vehicle }) {
-  const { vehicles, addCourtesyVehicle, markCourtesyReturned, manufacturers, vehicleTypes, fuelTypes, vehicleStatuses } = useStore();
+  const { vehicles, addCourtesyVehicle, markCourtesyReturned, manufacturers, vehicleTypes, fuelTypes, vehicleStatuses, addModelToManufacturer } = useStore();
   const [showAdd, setShowAdd] = useState(false);
   const [confirmReturn, setConfirmReturn] = useState<string | null>(null);
 
@@ -69,6 +69,7 @@ export function CourtesyPanel({ vehicle }: { vehicle: Vehicle }) {
           vehicleTypes={vehicleTypes}
           fuelTypes={fuelTypes}
           vehicleStatuses={vehicleStatuses}
+          addModelToManufacturer={addModelToManufacturer}
         />
       )}
 
@@ -170,6 +171,7 @@ function AddCourtesyDialog({
   vehicleTypes,
   fuelTypes,
   vehicleStatuses,
+  addModelToManufacturer,
 }: {
   parentVehicleId: string;
   onClose: () => void;
@@ -178,6 +180,7 @@ function AddCourtesyDialog({
   vehicleTypes: { id: string; name: string }[];
   fuelTypes: { id: string; name: string }[];
   vehicleStatuses: { id: string; name: string; isDefault: boolean }[];
+  addModelToManufacturer: (manufacturerId: string, model: string) => Promise<void>;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const defaultStatus = vehicleStatuses.find(s => s.isDefault);
@@ -197,6 +200,8 @@ function AddCourtesyDialog({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addingModel, setAddingModel] = useState(false);
+  const [newModelName, setNewModelName] = useState("");
 
   const manufacturerObj = manufacturers.find(m => m.name === form.manufacturer);
   const modelOptions = manufacturerObj?.models ?? [];
@@ -204,11 +209,25 @@ function AddCourtesyDialog({
   // Suppress unused (parentVehicleId is passed for clarity; logic uses it via onSubmit)
   void parentVehicleId;
 
+  async function handleAddNewModel() {
+    const name = newModelName.trim();
+    if (!name || !manufacturerObj) return;
+    await addModelToManufacturer(manufacturerObj.id, name);
+    setForm(f => ({ ...f, model: name }));
+    setNewModelName("");
+    setAddingModel(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!form.licensePlate.trim() || !form.manufacturer.trim() || !form.model.trim() || !form.courtesyStartDate) {
       setError("לוחית, יצרן, דגם ותאריך כניסה הם שדות חובה");
+      return;
+    }
+    // Validate date logic: expected return must be on or after entry date
+    if (form.courtesyExpectedReturnDate && form.courtesyExpectedReturnDate < form.courtesyStartDate) {
+      setError("תאריך החזרה צפוי לא יכול להיות לפני תאריך הכניסה");
       return;
     }
     setSaving(true);
@@ -261,27 +280,64 @@ function AddCourtesyDialog({
           <Select
             label="יצרן *"
             value={form.manufacturer}
-            onChange={e => setForm(f => ({ ...f, manufacturer: e.target.value, model: "" }))}
+            onChange={e => { setForm(f => ({ ...f, manufacturer: e.target.value, model: "" })); setAddingModel(false); }}
           >
             {manufacturers.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
           </Select>
-          {modelOptions.length > 0 ? (
-            <Select
-              label="דגם *"
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">דגם *</label>
+            <select
               value={form.model}
               onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
+              disabled={modelOptions.length === 0}
+              className={`w-full h-10 px-3 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400 transition-all border-gray-200 ${modelOptions.length === 0 ? "text-gray-400 bg-gray-50 cursor-not-allowed" : "text-gray-800"}`}
             >
-              <option value="">בחר דגם...</option>
+              <option value="">{modelOptions.length === 0 ? "אין דגמים — הוסף למטה" : "בחר דגם..."}</option>
               {modelOptions.map(m => <option key={m} value={m}>{m}</option>)}
-            </Select>
-          ) : (
-            <Input
-              label="דגם *"
-              value={form.model}
-              onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
-              placeholder="לדוגמה: Mazda 3"
-            />
-          )}
+            </select>
+
+            {form.manufacturer && !addingModel && (
+              <button
+                type="button"
+                onClick={() => setAddingModel(true)}
+                className="flex items-center gap-1.5 text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors"
+              >
+                <Plus size={13} /> הוסף דגם חדש ל{form.manufacturer}
+              </button>
+            )}
+
+            {addingModel && (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={newModelName}
+                  onChange={e => setNewModelName(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key === "Enter") { e.preventDefault(); await handleAddNewModel(); }
+                    if (e.key === "Escape") { setAddingModel(false); setNewModelName(""); }
+                  }}
+                  placeholder="שם הדגם..."
+                  className="flex-1 h-8 px-3 rounded-lg border border-amber-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewModel}
+                  className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white hover:bg-amber-600 transition-colors shrink-0"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingModel(false); setNewModelName(""); }}
+                  className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
           <Select
             label="סוג רכב"
             value={form.vehicleTypeId}
@@ -326,6 +382,7 @@ function AddCourtesyDialog({
               label="תאריך החזרה צפוי"
               type="date"
               value={form.courtesyExpectedReturnDate}
+              min={form.courtesyStartDate}
               onChange={e => setForm(f => ({ ...f, courtesyExpectedReturnDate: e.target.value }))}
             />
             <Select
