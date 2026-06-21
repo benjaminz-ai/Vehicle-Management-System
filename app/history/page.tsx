@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/Dialog";
-import { Search, Calendar, Car, Users, Clock, Download, Printer, ChevronDown, X, LogOut, Repeat } from "lucide-react";
+import { Search, Calendar, Car, Users, Clock, Download, Printer, ChevronDown, X, LogOut, Repeat, ChevronLeft } from "lucide-react";
 import { formatDate, formatDateTime, COURTESY_REASON_LABELS } from "@/lib/utils";
 
 function daysBetween(start: string, end: string) {
@@ -148,6 +148,16 @@ export default function HistoryPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
+  const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+
+  function toggleExpand(logId: string) {
+    setExpandedLogs(prev => {
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId);
+      else next.add(logId);
+      return next;
+    });
+  }
 
   const filtered = useMemo(() => {
     return assignmentLogs
@@ -330,15 +340,41 @@ export default function HistoryPage() {
                   v.courtesyStartDate >= logStart &&
                   v.courtesyStartDate <= logEnd
                 ).sort((a, b) => (a.courtesyStartDate ?? "").localeCompare(b.courtesyStartDate ?? ""));
+                const hasCourtesies = courtesyPeriods.length > 0;
+                const isExpanded = expandedLogs.has(log.id);
                 return (
                 <Fragment key={log.id}>
-                  <tr className="hover:bg-[#f8fafc] transition-colors group">
+                  <tr className={["hover:bg-[#f8fafc] transition-colors group",
+                    hasCourtesies && isExpanded ? "bg-[#f8fafc]" : ""].join(" ")}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
+                        {hasCourtesies ? (
+                          <button
+                            onClick={() => toggleExpand(log.id)}
+                            className="w-6 h-6 rounded-md hover:bg-amber-100 flex items-center justify-center transition-colors shrink-0 group/btn"
+                            title={isExpanded ? "סגור תקופות חלופי" : `הצג ${courtesyPeriods.length} תקופות חלופי`}
+                          >
+                            <ChevronLeft size={14} className={["text-amber-600 transition-transform",
+                              isExpanded ? "-rotate-90" : ""].join(" ")} />
+                          </button>
+                        ) : (
+                          <div className="w-6 shrink-0" />
+                        )}
                         <div className="w-7 h-7 rounded-lg bg-[#032147]/10 flex items-center justify-center text-[#032147] font-bold text-[10px] shrink-0">
                           {driver?.firstName?.[0]}{driver?.lastName?.[0]}
                         </div>
-                        <span className="font-medium text-[#032147] text-sm">{driver?.fullName ?? "—"}</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-[#032147] text-sm truncate">{driver?.fullName ?? "—"}</span>
+                          {hasCourtesies && (
+                            <button
+                              onClick={() => toggleExpand(log.id)}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-semibold border border-amber-200 transition-colors shrink-0"
+                            >
+                              <Repeat size={9} />
+                              {courtesyPeriods.length} חלופי{courtesyPeriods.length > 1 ? "ים" : ""}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -385,8 +421,8 @@ export default function HistoryPage() {
                       )}
                     </td>
                   </tr>
-                  {/* Courtesy sub-periods: shown nested under the main assignment row */}
-                  {courtesyPeriods.map(c => {
+                  {/* Courtesy sub-periods: accordion - only shown when expanded */}
+                  {isExpanded && courtesyPeriods.map(c => {
                     const cActive = !c.courtesyActualReturnDate;
                     return (
                       <tr key={`courtesy-${c.id}`} className="bg-amber-50/40 hover:bg-amber-50/70 transition-colors">
