@@ -139,7 +139,7 @@ function StatusColumn({
       <div
         {...attributes}
         {...listeners}
-        className="flex items-center gap-2 mb-3 cursor-grab active:cursor-grabbing"
+        className="sticky top-0 z-10 flex items-center gap-2 py-2 mb-2 cursor-grab active:cursor-grabbing bg-[#f0f4f8] border-b border-gray-200"
       >
         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: status.color }} />
         <h3 className="text-sm font-semibold text-[#032147]">{status.name}</h3>
