@@ -253,14 +253,16 @@ export default function BoardPage() {
         onDragOver={handleDragOver}
       >
         <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-          <div className="flex gap-5 overflow-x-auto pb-4">
-            {sortedStatuses.map(status => (
-              <StatusColumn
-                key={status.id}
-                status={status}
-                vehicles={vehiclesByStatus[status.id] ?? []}
-              />
-            ))}
+          <div className="overflow-auto max-h-[calc(100vh-200px)] pb-4">
+            <div className="flex gap-5">
+              {sortedStatuses.map(status => (
+                <StatusColumn
+                  key={status.id}
+                  status={status}
+                  vehicles={vehiclesByStatus[status.id] ?? []}
+                />
+              ))}
+            </div>
           </div>
         </SortableContext>
 
