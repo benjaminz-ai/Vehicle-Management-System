@@ -108,6 +108,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return;
             }
 
+            // Source-of-truth check: read the tenant's live status. Blocks the moment a
+            // tenant is frozen — for every user of it — without relying on a per-user flag
+            // or on the admin UI having propagated it. Fail-open if rules forbid the read.
+            if (data.tenantId) {
+              try {
+                const tSnap = await getDoc(doc(db, "tenants", data.tenantId));
+                if (tSnap.exists() && tSnap.data().isActive === false) {
+                  await signOut(auth);
+                  setUser(null);
+                  setProfile(null);
+                  setLoading(false);
+                  if (typeof window !== "undefined") {
+                    window.location.href = "/login?disabled=1";
+                  }
+                  return;
+                }
+              } catch {
+                /* tenant unreadable under current rules — fall back to the frozenByTenant flag */
+              }
+            }
+
             const tenantName: string | undefined = data.tenantName || undefined;
             setProfile({
               uid: firebaseUser.uid,
