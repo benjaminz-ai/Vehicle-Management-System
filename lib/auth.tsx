@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = userDoc.data();
 
             // Block disabled users
-            if (data.isActive === false) {
+            if (data.isActive === false || data.frozenByTenant === true) {
               await signOut(auth);
               setUser(null);
               setProfile(null);
@@ -106,26 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 window.location.href = "/login?disabled=1";
               }
               return;
-            }
-
-            // Block all members of a frozen tenant (super admin froze the company).
-            // Fail-open if the tenant doc can't be read (older rules) so we never lock users out by mistake.
-            if (data.tenantId) {
-              try {
-                const tenantSnap = await getDoc(doc(db, "tenants", data.tenantId));
-                if (tenantSnap.exists() && tenantSnap.data().isActive === false) {
-                  await signOut(auth);
-                  setUser(null);
-                  setProfile(null);
-                  setLoading(false);
-                  if (typeof window !== "undefined") {
-                    window.location.href = "/login?disabled=1";
-                  }
-                  return;
-                }
-              } catch {
-                /* tenant unreadable under current rules — don't block */
-              }
             }
 
             const tenantName: string | undefined = data.tenantName || undefined;

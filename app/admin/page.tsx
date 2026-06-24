@@ -130,7 +130,15 @@ export default function AdminPage() {
   };
 
   const toggleActive = async (tenant: Tenant) => {
-    await updateDoc(doc(db, "tenants", tenant.id), { isActive: !tenant.isActive });
+    const nextActive = !tenant.isActive;
+    await updateDoc(doc(db, "tenants", tenant.id), { isActive: nextActive });
+    // Propagate freeze/unfreeze to every user of this tenant, so login is blocked
+    // (frozenByTenant) without needing the client to read the tenant doc.
+    const { getDocs, query, where } = await import("firebase/firestore");
+    const snap = await getDocs(query(collection(db, "users"), where("tenantId", "==", tenant.id)));
+    await Promise.all(
+      snap.docs.map(u => updateDoc(doc(db, "users", u.id), { frozenByTenant: !nextActive }))
+    );
   };
 
   const startEdit = (t: Tenant) => {
