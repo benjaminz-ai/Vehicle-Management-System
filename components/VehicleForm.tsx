@@ -83,7 +83,7 @@ export function VehicleForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-    const data = { ...form, secondaryDriverIds: [] };
+    const data = { ...form };
     if (data.ownershipType === "company_owned") data.leasingCompanyName = "";
     onSave(data, pendingInsurances);
   }
